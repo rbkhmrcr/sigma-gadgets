@@ -17,6 +17,13 @@ explained below.
 
 ## the algo
 
+the groth-kohlweiss paper introduces two schemes using their one of many proofs
+-- one is a ring signature scheme (not linkable, perfect anonymity), and the other
+is a 'zerocoin' scheme, where coins are commitments to serial numbers. I _think_
+we can use this serial number as a type of linking tag, but we may have to adapt it.
+Besides the serial number, the schemes are quite similar. They are also not _too_
+different from the original unique ring signature algorithm that we implemented.
+
 ### prep
 
 This description is entirely just a reqording of things in the groth-kohlweiss

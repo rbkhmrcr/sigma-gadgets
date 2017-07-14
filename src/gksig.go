@@ -244,7 +244,7 @@ func RingSign(R Ring, ski *big.Int, m []byte, signer int) RingSignature {
 		byteslist = append(byteslist, xx[:]...)
 	}
 
-	hasha := sha3.ShakeSum256(byteslist)
+	hasha := sha3.Sum256(byteslist)
 	hashb := Convert(hasha[:])
 	hashb.Mod(hashb, N)
 	csum.Mod(csum, N)
@@ -298,7 +298,7 @@ func RingVerif(R Ring, m []byte, sigma RingSignature) bool {
 		byteslist = append(byteslist, xx[:]...)
 	}
 
-	hash := sha3.ShakeSum256(byteslist)
+	hash := sha3.Sum256(byteslist)
 	hashhash := Convert(hash[:])
 	hashhash.Mod(hashhash, N)
 	csum.Mod(csum, N)
@@ -370,7 +370,7 @@ func HashToCurve(s []byte) (CurvePoint, error) {
 	z := big.NewInt(0)
 	z.SetString("57896044618658097711785492504343953926634992332820282019728792003954417335832", 10)
 
-	array := sha3.ShakeSum256(s) // Sum outputs an array of 32 bytes :)
+	array := sha3.Sum256(s) // Sum outputs an array of 32 bytes :)
 	x = Convert(array[:])
 	for true {
 		//s := []byte(str)

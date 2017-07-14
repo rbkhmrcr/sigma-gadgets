@@ -42,8 +42,12 @@ money, into the mixing contract as expected.
 
 ### withdrawal stage
 
-the recipients run the groth-kohlweiss one of many sigma protocol, in order to form the
-linkable ring signature.
+the recipients run the groth-kohlweiss protocol to generate a 'one of many' proof, which
+acts as a ring signature. in the paper, this can be enhanced with a serial number, but
+this actually isn't really what we want. what we want is a linkable ring signature, which
+is different. otherwise the state just keeps growing and growing ? people who withdraw
+from the contract later have to pay more, but their anonymity set is larger, which makes
+sense, i guess.
 
 
 

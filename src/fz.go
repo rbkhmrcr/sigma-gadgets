@@ -1,7 +1,7 @@
 package main
 
 import (
-	secp "btcec" // dependancies can be changed to my package is this is ever any better
+	secp "btcec" // dependencies can be changed to my package is this is ever any better
 	"crypto/rand"
 	"crypto/sha3" // we need a hash function that isn't vuln to length extension attacks
 	"bytes"

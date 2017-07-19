@@ -2,7 +2,7 @@
 
 groth-kohlweiss ring signatures in solidity with backend in go!  The paper can be
 found [here](https://eprint.iacr.org/2014/764). Signatures are logarithmic in
-number of participants, and can be altered from the paper constuction to
+number of participants, and can be altered from the paper construction to
 require only the random oracle model (rather than existing in the common
 reference or random string models).
 
@@ -26,7 +26,7 @@ different from the original unique ring signature algorithm that we implemented.
 
 ### prep
 
-This description is entirely just a reqording of things in the groth-kohlweiss
+This description is entirely just a rewording of things in the groth-kohlweiss
 paper, and so all credit for the beauty of the algorithm goes to them! :)
 
 For n participants in the ring, the sigma protocol has the prover send 4 log n

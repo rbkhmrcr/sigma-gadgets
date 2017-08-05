@@ -99,6 +99,47 @@ func prove() {
 	}
 }
 
+func verify() bool {
+
+for j := 0; j < n; j++ {
+
+		lhs := ca[j].Add(cl[j].ScalarMult(x))
+		rhs := commit(f[j], za[j])
+		if lhs != rhs {
+			return false
+		}
+
+		lhs = cb[j].Add(cl[j].ScalarMult(x - f[j]))
+		rhs = CurvePoint{}.ScalarBaseMult(zb[j])
+		if lhs != rhs {
+		return false
+		}
+
+		var fproduct *big.Int
+		var cproduct *CurvePoint
+		for i := 0; i < N; i++ {
+		// make i into binary here
+			for j := 0; j < n; j++ {
+				fproduct = fproduct * ftbd(j, i[j])
+				//ftbd as is function to be defined lol
+				//ftbd is fj when i[j] = 1 and x - fj when i[j] = 0
+			}
+
+			cproduct = cproduct.Add(c[i].ScalarMult(fproduct)) // this is lhs part 1
+		}
+
+		var cdkproduct *CurvePoint
+		for k := 0; k < n; k++ {
+			cdkproduct = cdkproduct.Add(cd[k].ScalarMult(-x**k))
+		}
+
+		lhs = cproduct.Add(cdkproduct)
+		rhs = CurvePoint{}.ScalarBaseMult(zd)
+		if lhs != rhs {
+			return false
+		}
+		return true
+}
 
 
 func commit(a *big.Int, b *big.Int) CurvePoint {

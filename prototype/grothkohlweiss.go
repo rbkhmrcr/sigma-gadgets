@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	secp "github.com/btcsuite/btcec"
+	secp "github.com/btcsuite/btcd/btcec"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -34,6 +34,32 @@ type CurvePoint struct {
 func init() {
 	S = secp.S256()
 	H, _ = HashToCurve("i am a stupid moron".Bytes()) // check this
+}
+
+func polysetup() {
+	N = len(R.PubKeys)
+	// n = log base 2 len(R.PubKeys)
+	// R hasnt even been defined yet
+	// make sure all indices are now in binary and the same length
+
+	for j := 0; j < n; j++ {
+		rj, e := rand.Int(rand.Reader, N)
+		check(e)
+		aj, e := rand.Int(rand.Reader, N)
+		check(e)
+		sj, e := rand.Int(rand.Reader, N)
+		check(e)
+		tj, e := rand.Int(rand.Reader, N)
+		check(e)
+		rhok, e := rand.Int(rand.Reader, N)
+		check(e)
+	}
+}
+
+func commitment(a *big.Int, b *big.Int) CurvePoint {
+	ha := H.ScalarMult(a)
+	gb := CurvePoint{}.ScalarBaseMult(b)
+	return ha.Add(gb) // why don't we need to do the interface thing here? how does it know? :o
 }
 
 func HashToCurve(s []byte) (CurvePoint, error) {

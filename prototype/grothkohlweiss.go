@@ -24,7 +24,7 @@ type CurvePoint struct {
 	Y *big.Int `json:'y"`
 }
 
-func (c CurvePoint) String string {
+func (c CurvePoint) String() string {
 	return fmt.Sprintf("X: %s, Y: %s", c.X, c.Y)
 }
 
@@ -77,6 +77,42 @@ func init() {
 	H, _ = HashToCurve("i am a stupid moron".Bytes()) // check this
 }
 
+func main() {
+args := os.Args[1:]
+	privkeyfile, err := ioutil.ReadFile("privkeys.json")
+	sk := PrivKeysStr{}
+	if err = json.Unmarshal(privkeyfile, &sk); err != nil {
+		panic(err)
+	}
+	keyfile, _ := ioutil.ReadFile("pubkeys.json")
+	rn := RingStr{}
+	if err = json.Unmarshal(keyfile, &rn); err != nil {
+		panic(err)
+	}
+	pubkeyring := convertPubKeys(rn)
+	// we need to find out which public key the private key corresponds to.
+
+	var message []byte
+	if len(args) > 0 {
+		message, err = hex.DecodeString(args[0])
+		//fmt.Println(hex.EncodeToString(message))
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	for i := 0; i < len(pk.Keys); i++ {
+		privbytes, err := hex.DecodeString(sk.Keys[i])
+		if err != nil {
+			panic(err)
+		}
+		privBN := new(big.Int).SetBytes(privbytes)
+		SignAndVerify(pubkeyring, privBN, message)
+	}
+}
+
+
+
 func prove() {
 
 	N = len(R.PubKeys)
@@ -100,6 +136,7 @@ func prove() {
 		rj, e := rand.Int(rand.Reader, N)
 		check(e)
 		randoms = append(randoms, rj)
+		// so
 		aj, e := rand.Int(rand.Reader, N)
 		check(e)
 		randoms = append(randoms, aj)

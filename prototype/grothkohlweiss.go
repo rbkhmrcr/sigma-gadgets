@@ -24,6 +24,47 @@ type CurvePoint struct {
 	Y *big.Int `json:'y"`
 }
 
+func (c CurvePoint) String string {
+	return fmt.Sprintf("X: %s, Y: %s", c.X, c.Y)
+}
+
+func (c CurvePoint) ScalarBaseMult(x *big.Int) CurvePoint {
+	px, py := Group.ScalarBaseMult(x.Bytes())
+	return CurvePoint{px, py}
+}
+
+func (c CurvePoint) ScalarMult(x *big.Int) CurvePoint {
+	px, py := Group.ScalarMult(c.X, c.Y, x.Bytes())
+	return CurvePoint{px, py}
+}
+
+func (c CurvePoint) Add(y CurvePoint) CurvePoint {
+	px, py := Group.Add(c.X, c.Y, y.X, y.Y)
+	return CurvePoint{px, py}
+}
+
+
+type PubKeyStr struct {
+	X string `json:"x"`
+	Y string `json:"y"`
+}
+
+type RingStr struct {
+	PubKeys []PubKeyStr `json:"pubkeys"`
+}
+
+type PrivKeysStr struct {
+	Keys []string `json:"privkeys"`
+}
+
+type PubKey struct {
+	CurvePoint
+}
+
+type Ring struct {
+	PubKeys []PubKey `json:"pubkeys"`
+}
+
 // we need public parameters ck = commitment key = g, h
 // with g and h so we dont know dl of h wrt g or vice versa
 // we actually dont ever need to define g as we can just use .ScalarBaseMult

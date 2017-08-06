@@ -46,7 +46,7 @@ func prove() {
 
 	// R hasnt even been defined yet
 	// make sure all indices are now in binary and the same length
-	randoms := make([]*bit.Int, len(5*n))
+	randoms := make([]*big.Int, len(5*n))
 	commitments := make([]*CurvePoint, len(5*n))
 
 	// should these be pointers or no? whats the dealio?
@@ -58,19 +58,19 @@ func prove() {
 		// do we need to append instead of filling in like this?
 		rj, e := rand.Int(rand.Reader, N)
 		check(e)
-		// append
+		randoms = append(randoms, rj)
 		aj, e := rand.Int(rand.Reader, N)
 		check(e)
-		// append
+		randoms = append(randoms, aj)
 		sj, e := rand.Int(rand.Reader, N)
 		check(e)
-		// append
+		randoms = append(randoms, sj)
 		tj, e := rand.Int(rand.Reader, N)
 		check(e)
-		// append
+		randoms = append(randoms, tj)
 		rhok, e := rand.Int(rand.Reader, N)
 		check(e)
-		// append
+		randoms = append(randoms, rhok)
 
 		// we should probs make these entries in arrays? bleh
 		cl[j] := commit(l[j], r[j])

@@ -13,7 +13,6 @@ import (
 	// "log"
 	"math"
 	"math/big"
-	"os"
 	"strconv"
 )
 
@@ -91,7 +90,6 @@ func init() {
 }
 
 func main() {
-	args := os.Args[1:]
 	privkeyfile, err := ioutil.ReadFile("privkeys.json")
 	sk := PrivKeysStr{}
 	if err = json.Unmarshal(privkeyfile, &sk); err != nil {
@@ -105,7 +103,7 @@ func main() {
 	pubkeyring := convertPubKeys(rn)
 	// we need to find out which public key the private key corresponds to.
 
-	for i := 0; i < len(pk.Keys); i++ {
+	for i := 0; i < len(sk.Keys); i++ {
 		privbytes, err := hex.DecodeString(sk.Keys[i])
 		if err != nil {
 			panic(err)
@@ -121,9 +119,9 @@ func prove(ring Ring, sk *big.Int) {
 	signerindex := int64(keyCompare(pk, ring))
 	signerindexbin := strconv.FormatInt(signerindex, 2)
 
-	N = len(ring)
-	n = int(math.Log2(N))
-	if 2**n != N {
+	N := len(ring)
+	n := int(math.Log2(N))
+	if 2**n != N { // do we have to use .exp or something?
 		n = n + 1
 	}
 

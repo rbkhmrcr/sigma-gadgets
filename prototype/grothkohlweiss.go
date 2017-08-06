@@ -1,16 +1,20 @@
 package main
 
 import (
-	"bytes"
+	// "bytes"
 	"crypto/rand"
-	"golang.org/x/crypto/sha3"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	secp "github.com/btcsuite/btcd/btcec"
+	"golang.org/x/crypto/sha3"
 	"io/ioutil"
-	"log"
+	// "log"
+	"math"
 	"math/big"
+	"os"
+	"strconv"
 )
 
 var S *secp.KoblitzCurve
@@ -29,20 +33,19 @@ func (c CurvePoint) String() string {
 }
 
 func (c CurvePoint) ScalarBaseMult(x *big.Int) CurvePoint {
-	px, py := Group.ScalarBaseMult(x.Bytes())
+	px, py := S.ScalarBaseMult(x.Bytes())
 	return CurvePoint{px, py}
 }
 
 func (c CurvePoint) ScalarMult(x *big.Int) CurvePoint {
-	px, py := Group.ScalarMult(c.X, c.Y, x.Bytes())
+	px, py := S.ScalarMult(c.X, c.Y, x.Bytes())
 	return CurvePoint{px, py}
 }
 
 func (c CurvePoint) Add(y CurvePoint) CurvePoint {
-	px, py := Group.Add(c.X, c.Y, y.X, y.Y)
+	px, py := S.Add(c.X, c.Y, y.X, y.Y)
 	return CurvePoint{px, py}
 }
-
 
 type PubKeyStr struct {
 	X string `json:"x"`
@@ -65,6 +68,16 @@ type Ring struct {
 	PubKeys []PubKey `json:"pubkeys"`
 }
 
+func keyCompare(pub CurvePoint, R Ring) int {
+	j := 0
+	for i := 0; i < len(R.PubKeys); i++ {
+		if pub.X.Cmp(R.PubKeys[i].X) == 0 && pub.Y.Cmp(R.PubKeys[i].Y) == 0 {
+			j = i
+		}
+	}
+	return j
+}
+
 // we need public parameters ck = commitment key = g, h
 // with g and h so we dont know dl of h wrt g or vice versa
 // we actually dont ever need to define g as we can just use .ScalarBaseMult
@@ -78,7 +91,7 @@ func init() {
 }
 
 func main() {
-args := os.Args[1:]
+	args := os.Args[1:]
 	privkeyfile, err := ioutil.ReadFile("privkeys.json")
 	sk := PrivKeysStr{}
 	if err = json.Unmarshal(privkeyfile, &sk); err != nil {
@@ -98,15 +111,17 @@ args := os.Args[1:]
 			panic(err)
 		}
 		privBN := new(big.Int).SetBytes(privbytes)
-		sign(pubkeyring, privBN)
+		prove(pubkeyring, privBN)
 	}
 }
 
+func prove(ring Ring, sk *big.Int) {
 
+	pk := CurvePoint{}.ScalarBaseMult(sk)
+	signerindex := int64(keyCompare(pk, ring))
+	signerindexbin := strconv.FormatInt(signerindex, 2)
 
-func prove() {
-
-	N = len(R.PubKeys)
+	N = len(ring)
 	n = int(math.Log2(N))
 	if 2**n != N {
 		n = n + 1
@@ -114,7 +129,7 @@ func prove() {
 
 	// R hasnt even been defined yet
 	// make sure all indices are now in binary and the same length
-	randoms := make([]*big.Int, len(5*n))
+	randomvars := make([]*big.Int, len(5*n))
 	commitments := make([]*CurvePoint, len(5*n))
 
 	// should these be pointers or no? whats the dealio?
@@ -126,30 +141,48 @@ func prove() {
 		// do we need to append instead of filling in like this?
 		rj, e := rand.Int(rand.Reader, N)
 		check(e)
-		randoms = append(randoms, rj)
-		// so
+		randomvars = append(randomvars, rj)
+		// so r[j] will be randomvars[5*j]
+
 		aj, e := rand.Int(rand.Reader, N)
 		check(e)
-		randoms = append(randoms, aj)
+		randomvars = append(randomvars, aj)
+		// so a[j] will be randomvars[5*j + 1]
+
 		sj, e := rand.Int(rand.Reader, N)
 		check(e)
-		randoms = append(randoms, sj)
+		randomvars = append(randomvars, sj)
+		// so s[j] will be randomvars[5*j + 2]
+
 		tj, e := rand.Int(rand.Reader, N)
 		check(e)
-		randoms = append(randoms, tj)
+		randomvars = append(randomvars, tj)
+		// so t[j] will be randomvars[5*j + 3]
+
 		rhok, e := rand.Int(rand.Reader, N)
 		check(e)
-		randoms = append(randoms, rhok)
+		randomvars = append(randomvars, rhok)
+		// so rho[k] will be randomvars[5*j + 4]
 
-		// we should probs make these entries in arrays? bleh
-		cl[j] := commit(l[j], r[j])
-		ca[j] := commit(a[j], s[j])
-		cb[j] := commit(l[j] + a[j], t[j])
+		// should these actually not just use the variables aj, sj, etc, as they are still
+		// set to the ones that are needed? is this lots of unnecessary array fetching?
+
+		// clj = lj * h + rj * g
+		commitments = append(commitments, commit(signerindexbin[j], randomvars[5*j]))
+		// clj will be commitments[3*j]
+
+		// caj = aj * h + sj * g
+		commitments = append(commitments, commit(randomvars[5*j+1], randomvars[5*j+2]))
+		// caj will be commitments[3*j + 1]
+
+		// cbj = (lj * aj) * h + tj * g
+		commitments = append(commitments, commit(signerindexbin[j]+randomvars[5*j+1], randomvars[5*j+3]))
+		// cbj will be commitments[3*j + 2]
 
 		k := j - 1
 		var product CurvePoint
 		for i := 0; i < N; i++ {
-		// we need an array of polynomial coefficients to exist
+			// we need an array of polynomial coefficients to exist
 			temp := PubKey[j].ScalarMult(polycoeff[i][k])
 			product := product.Add(temp)
 		}
@@ -158,16 +191,16 @@ func prove() {
 
 		x := sha3.Sum256("wow so much fun")
 
-		fj := lj * x + aj
-		zaj := rj * x + sj
-		zbj := rj * (x - fj) + tj
+		fj := lj*x + aj // this is much prettier than the above isn't it.
+		zaj := rj*x + sj
+		zbj := rj*(x-fj) + tj
 
 		var sum *big.Int // should this be a pointer?
 		for k := 0; k < n; k++ {
-			temp := rho[k] * x**k
+			temp := randomvars[5*j+4] * x * *k
 			sum = sum + temp
 		}
-		zd := r * x**n - sum
+		zd := r*x**n - sum
 
 		// return all commitments and fj and zaj and zbj and zdk
 	}
@@ -175,7 +208,7 @@ func prove() {
 
 func verify() bool {
 
-for j := 0; j < n; j++ {
+	for j := 0; j < n; j++ {
 
 		lhs := ca[j].Add(cl[j].ScalarMult(x))
 		rhs := commit(f[j], za[j])
@@ -186,13 +219,13 @@ for j := 0; j < n; j++ {
 		lhs = cb[j].Add(cl[j].ScalarMult(x - f[j]))
 		rhs = CurvePoint{}.ScalarBaseMult(zb[j])
 		if lhs != rhs {
-		return false
+			return false
 		}
 
 		var fproduct *big.Int
 		var cproduct *CurvePoint
 		for i := 0; i < N; i++ {
-		// make i into binary here
+			// make i into binary here
 			for j := 0; j < n; j++ {
 				fproduct = fproduct * ftbd(j, i[j])
 				//ftbd as is function to be defined lol
@@ -204,7 +237,7 @@ for j := 0; j < n; j++ {
 
 		var cdkproduct *CurvePoint
 		for k := 0; k < n; k++ {
-			cdkproduct = cdkproduct.Add(cd[k].ScalarMult(-x**k))
+			cdkproduct = cdkproduct.Add(cd[k].ScalarMult(-x * *k))
 		}
 
 		lhs = cproduct.Add(cdkproduct)
@@ -213,8 +246,8 @@ for j := 0; j < n; j++ {
 			return false
 		}
 		return true
+	}
 }
-
 
 func commit(a *big.Int, b *big.Int) CurvePoint {
 	ha := H.ScalarMult(a)
@@ -264,4 +297,22 @@ func Convert(data []byte) *big.Int {
 	z := new(big.Int)
 	z.SetBytes(data)
 	return z
+}
+
+func convertPubKeys(rn RingStr) Ring {
+
+	rl := len(rn.PubKeys)
+	//fmt.Println("Length : ", rl)
+	var ring Ring
+
+	for i := 0; i < rl; i++ {
+		var bytesx []byte
+		var bytesy []byte
+		bytesx, _ = hex.DecodeString(string(rn.PubKeys[i].X))
+		bytesy, _ = hex.DecodeString(string(rn.PubKeys[i].Y))
+		pubkeyx := new(big.Int).SetBytes(bytesx) // This makes big int
+		pubkeyy := new(big.Int).SetBytes(bytesy) // So we can do EC arithmetic
+		ring.PubKeys = append(ring.PubKeys, PubKey{CurvePoint{pubkeyx, pubkeyy}})
+	}
+	return ring
 }

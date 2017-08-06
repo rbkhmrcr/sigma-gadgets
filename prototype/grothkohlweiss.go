@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
-	"crypto/sha3" // we need a hash function that isn't vuln to length extension attacks
+	"golang.org/x/crypto/sha3"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -37,35 +37,40 @@ func init() {
 }
 
 func prove() {
+
 	N = len(R.PubKeys)
-	// n = log base 2 len(R.PubKeys)
+	n = int(math.Log2(N))
+	if 2**n != N {
+		n = n + 1
+	}
+
 	// R hasnt even been defined yet
 	// make sure all indices are now in binary and the same length
-		var r []*big.Int
-		var a []*big.Int
-		var s []*big.Int
-		var t []*big.Int
-		var rho []*big.Int
+	randoms := make([]*bit.Int, len(5*n))
+	commitments := make([]*CurvePoint, len(5*n))
 
-		var cl []*CurvePoint
-		var ca []*CurvePoint
-		var cb []*CurvePoint
+	// should these be pointers or no? whats the dealio?
 
 	for j := 0; j < n; j++ {
 		// psa that these arrays dont actually exist?
 		// so we need to initialise them? make them slices? i dont get it?
 		// should we not replace this with something more compact (yes)
 		// do we need to append instead of filling in like this?
-		r[j], e := rand.Int(rand.Reader, N)
+		rj, e := rand.Int(rand.Reader, N)
 		check(e)
-		a[j], e := rand.Int(rand.Reader, N)
+		// append
+		aj, e := rand.Int(rand.Reader, N)
 		check(e)
-		s[j], e := rand.Int(rand.Reader, N)
+		// append
+		sj, e := rand.Int(rand.Reader, N)
 		check(e)
-		t[j], e := rand.Int(rand.Reader, N)
+		// append
+		tj, e := rand.Int(rand.Reader, N)
 		check(e)
-		rho[k], e := rand.Int(rand.Reader, N)
+		// append
+		rhok, e := rand.Int(rand.Reader, N)
 		check(e)
+		// append
 
 		// we should probs make these entries in arrays? bleh
 		cl[j] := commit(l[j], r[j])

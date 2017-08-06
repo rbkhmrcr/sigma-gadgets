@@ -92,22 +92,13 @@ args := os.Args[1:]
 	pubkeyring := convertPubKeys(rn)
 	// we need to find out which public key the private key corresponds to.
 
-	var message []byte
-	if len(args) > 0 {
-		message, err = hex.DecodeString(args[0])
-		//fmt.Println(hex.EncodeToString(message))
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	for i := 0; i < len(pk.Keys); i++ {
 		privbytes, err := hex.DecodeString(sk.Keys[i])
 		if err != nil {
 			panic(err)
 		}
 		privBN := new(big.Int).SetBytes(privbytes)
-		SignAndVerify(pubkeyring, privBN, message)
+		sign(pubkeyring, privBN)
 	}
 }
 

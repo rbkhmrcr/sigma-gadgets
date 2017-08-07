@@ -190,6 +190,8 @@ func polynomialbuilder(signerindex int, ringsize int) poly.Poly {
 
 	}
 
+	// we need to save all the poly arrays to one big array so we can access them by poly[i][k] etc :)
+
 	return poly.RandomPoly(int64(ringsize), int64(3))
 }
 

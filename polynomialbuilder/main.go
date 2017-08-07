@@ -6,11 +6,11 @@ import (
 	//	"errors"
 	"fmt"
 	secp "github.com/btcsuite/btcd/btcec"
-	//	poly "github.com/jongukim/polynomial"
+	poly "github.com/jongukim/polynomial"
 	"io/ioutil"
 	//	"math"
 	"math/big"
-	//	"strconv"
+	"strconv"
 )
 
 // S is the KoblitzCurve group from btcec ?
@@ -101,8 +101,23 @@ func main() {
 		}
 		privbn := new(big.Int).SetBytes(privbytes)
 		fmt.Println(privbn)
+
+	}
+	randompoly := polynomialbuilder(int64(3), int64(5))
+
+	fmt.Println(randompoly)
+
+}
+
+func polynomialbuilder(signerindex int64, ringlength int64) poly.Poly {
+	signerindexbin := strconv.FormatInt(signerindex, 2)
+	fmt.Println(signerindexbin)
+
+	for j := uint64(0); j < uint64(len(signerindexbin)); j++ {
+		fmt.Println((signerindex >> j) & 0x1)
 	}
 
+	return poly.RandomPoly(int64(3), int64(3))
 }
 
 func convertPubKeys(rn RingStr) Ring {

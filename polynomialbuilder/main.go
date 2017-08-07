@@ -112,11 +112,11 @@ func main() {
 
 }
 
-func polynomialbuilder(signerindex int, ringlength int) poly.Poly {
+func polynomialbuilder(signerindex int, ringsize int) poly.Poly {
 
 	// this is just to print and get the bit length, n
 	signerindexbin := strconv.FormatInt(int64(signerindex), 2)
-	ringbin := strconv.FormatInt(int64(ringlength), 2)
+	ringbin := strconv.FormatInt(int64(ringsize), 2)
 	fmt.Println(signerindexbin)
 
 	// things need to be uint so the bitshifting works
@@ -130,34 +130,58 @@ func polynomialbuilder(signerindex int, ringlength int) poly.Poly {
 	// like an array of the final polynomials :)
 	// maybe we should keep them all separate.
 	// i don't really know yet
-	var functionproduct poly.Poly
 	// if we have this as a pointer it shouts at me when it gets assigned
 	var functiontemp poly.Poly
 
-	for i := 0; i < ringlength; i++ {
+	// i is the key index.
+	for i := 0; i < ringsize; i++ {
+
+		// the products of functions defined by each i form distinct polynomials (one per i)
+		// this polynomial will have degree max bitlength(ringlength)
+		product := poly.NewPolyInts(0, 0, 0, 0, 0)
+
+		// j is the bit index.
+		// the functions defined in this bit get multiplied together to form the poly above
 		for j := uint(0); j < uint(len(ringbin)); j++ {
+
 			aj, e := rand.Int(rand.Reader, grouporder)
 			check(e)
+			z, e := rand.Int(rand.Reader, grouporder)
+			check(e)
+
+			// we compare i (the current index) to l (the signer index), bitwise
 			if (i >> j & 0x1) == 0 {
-				var z *big.Int
 				if ((signerindex >> j) & 0x1) == 0 {
 					// f = x - aj
-					functiontemp = poly.NewPolyInts(1, int(z.Neg(aj).Int64()))
+					functiontemp = append(functiontemp, big.NewInt(1))
+					functiontemp = append(functiontemp, z.ModInverse(aj, grouporder))
 				}
-				// otherwise it's just - aj
-				functiontemp = poly.NewPolyInts(0, int(z.Neg(aj).Int64()))
+				if ((signerindex >> j) & 0x1) == 1 {
+					// otherwise it's just - aj
+					functiontemp = append(functiontemp, big.NewInt(0))
+					functiontemp = append(functiontemp, z.ModInverse(aj, grouporder))
+				}
 			}
+
 			if (i >> j & 0x1) == 1 {
 				if ((signerindex >> j) & 0x1) == 1 {
 					// f = x + aj
-					functiontemp = poly.NewPolyInts(1, int(aj.Int64()))
+					functiontemp = append(functiontemp, big.NewInt(1))
+					// this mod is super redundant
+					functiontemp = append(functiontemp, z.Mod(aj, grouporder))
 				}
-				functiontemp = poly.NewPolyInts(0, int(aj.Int64()))
+				if ((signerindex >> j) & 0x1) == 0 {
+					// otherwise it's just aj
+					functiontemp = append(functiontemp, big.NewInt(0))
+					// this mod is super redundant
+					functiontemp = append(functiontemp, z.Mod(aj, grouporder))
+				}
 			}
-			functionproduct = functiontemp.Mul(functionproduct, grouporder)
+
+			product = product.Mul(functiontemp, grouporder)
 		}
 	}
-	return poly.RandomPoly(int64(3), int64(3))
+	return poly.RandomPoly(int64(ringsize), int64(3))
 }
 
 func convertPubKeys(rn RingStr) Ring {

@@ -103,20 +103,53 @@ func main() {
 		fmt.Println(privbn)
 
 	}
-	randompoly := polynomialbuilder(int64(3), int64(5))
+	// we should have these numbers read in from the files etc etc etc
+	randompoly := polynomialbuilder(int64(8), int64(17))
 
 	fmt.Println(randompoly)
 
 }
 
 func polynomialbuilder(signerindex int64, ringlength int64) poly.Poly {
+
+	// this is pretty much just to print and get the bit length, n
 	signerindexbin := strconv.FormatInt(signerindex, 2)
+	ringbin := strconv.FormatInt(ringlength, 2)
 	fmt.Println(signerindexbin)
 
-	for j := uint64(0); j < uint64(len(signerindexbin)); j++ {
+	// things need to be uint so the bitshifting works
+	// len(ringbin) = n
+	for j := uint64(0); j < uint64(len(ringbin)); j++ {
 		fmt.Println((signerindex >> j) & 0x1)
 	}
 
+	// we should make some array of f[i] ?
+	// with each f[i] the product over the f[i][j] ?
+	// like an array of the final polynomials :)
+	// maybe we should keep them all separate.
+	// i don't really know yet
+	var functionproduct []*poly.Poly
+
+	for i := 0; i < ringlength; i++ {
+		for j := uint(0); j < uint(len(ringbin)); j++ {
+			if (i >> j & 0x1) == 0 {
+				if ((signerindex >> j) & 0x1) == 0 {
+					// f = x - aj (aj is bigint so might have to use .minus?)
+					functiontemp = poly.NewPolyInts(1, -a[j])
+				}
+				// otherwise it's just - aj
+				functiontemp = poly.NewPolyInts(0, -a[j])
+			}
+			if (i >> j & 0x1) == 1 {
+				if ((signerindex >> j) & 0x1) == 1 {
+					// f = x + aj
+					functiontemp = poly.NewPolyInts(1, a[j])
+				}
+				functiontemp = poly.NewPolyInts(0, a[j])
+			}
+			functionproduct = functiontemp.Multiply(functionproduct)
+		}
+	}
 	return poly.RandomPoly(int64(3), int64(3))
 }
 

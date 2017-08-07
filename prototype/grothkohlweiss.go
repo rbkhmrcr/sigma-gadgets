@@ -85,8 +85,8 @@ func keyCompare(pub CurvePoint, R Ring) int {
 // we could whack a few premade key pairs in here too or not :)
 
 func init() {
-	S = secp.S256()
-	H, _ = HashToCurve("i am a stupid moron".Bytes()) // check this
+	S := secp.S256()
+	H, _ := HashToCurve([]byte("i am a stupid moron")) // check this
 }
 
 func main() {
@@ -187,7 +187,7 @@ func prove(ring Ring, sk *big.Int) {
 
 		cdk := product.Add(CurvePoint{}.ScalarCaseMult(rhok))
 
-		x := sha3.Sum256("wow so much fun")
+		x := sha3.Sum256([]byte("wow so much fun"))
 
 		fj := lj*x + aj // this is much prettier than the above isn't it.
 		zaj := rj*x + sj

@@ -119,18 +119,15 @@ func polynomialbuilder(signerindex int, ringsize int) poly.Poly {
 	ringbin := strconv.FormatInt(int64(ringsize), 2)
 	fmt.Println(signerindexbin)
 	fmt.Println(len(ringbin))
+
 	// things need to be uint so the bitshifting works
 	// len(ringbin) = n
+	// ------------------------------------------------------------------------------
+	// is it gonna cause problems that we're running 0 -> n - 1 rather than 1 -> n :(
+
 	for j := uint(0); j < uint(len(ringbin)); j++ {
 		fmt.Println((signerindex >> j) & 0x1)
 	}
-
-	// we should make some array of f[i] ?
-	// with each f[i] the product over the f[i][j] ?
-	// like an array of the final polynomials :)
-	// maybe we should keep them all separate.
-	// i don't really know yet
-	// if we have this as a pointer it shouts at me when it gets assigned
 
 	// i is the key index.
 	for i := 0; i < ringsize; i++ {
@@ -178,8 +175,10 @@ func polynomialbuilder(signerindex int, ringsize int) poly.Poly {
 					functiontemp = append(functiontemp, big.NewInt(0))
 				}
 			}
-			fmt.Println(functiontemp)
+
 			if j == 0 {
+				// i should do this in some prettier way hey?
+				product = poly.NewPolyInts(0, 0, 0, 0, 0)
 				product = functiontemp
 			} else {
 				product = product.Mul(functiontemp, grouporder)
@@ -187,6 +186,7 @@ func polynomialbuilder(signerindex int, ringsize int) poly.Poly {
 		}
 
 		polyarray = append(polyarray, product)
+		fmt.Println(polyarray)
 
 	}
 

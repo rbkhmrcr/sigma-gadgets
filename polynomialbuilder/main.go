@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	//	"errors"
@@ -15,6 +16,8 @@ import (
 
 // S is the KoblitzCurve group from btcec ?
 var S *secp.KoblitzCurve
+var group = secp.S256()
+var grouporder = group.N
 
 // we need a curve point type so that curve points are just one thing
 // as opposed to being representing by their bigint affine coordinates x, y :)
@@ -76,7 +79,6 @@ type Ring struct {
 }
 
 func main() {
-
 	// read in all the private keys
 	privkeyfile, err := ioutil.ReadFile("privkeys.json")
 	sk := PrivKeysStr{} // because all json files are read in as strings
@@ -104,22 +106,22 @@ func main() {
 
 	}
 	// we should have these numbers read in from the files etc etc etc
-	randompoly := polynomialbuilder(int64(8), int64(17))
+	randompoly := polynomialbuilder(int(8), int(17))
 
 	fmt.Println(randompoly)
 
 }
 
-func polynomialbuilder(signerindex int64, ringlength int64) poly.Poly {
+func polynomialbuilder(signerindex int, ringlength int) poly.Poly {
 
-	// this is pretty much just to print and get the bit length, n
-	signerindexbin := strconv.FormatInt(signerindex, 2)
-	ringbin := strconv.FormatInt(ringlength, 2)
+	// this is just to print and get the bit length, n
+	signerindexbin := strconv.FormatInt(int64(signerindex), 2)
+	ringbin := strconv.FormatInt(int64(ringlength), 2)
 	fmt.Println(signerindexbin)
 
 	// things need to be uint so the bitshifting works
 	// len(ringbin) = n
-	for j := uint64(0); j < uint64(len(ringbin)); j++ {
+	for j := uint(0); j < uint(len(ringbin)); j++ {
 		fmt.Println((signerindex >> j) & 0x1)
 	}
 
@@ -128,26 +130,31 @@ func polynomialbuilder(signerindex int64, ringlength int64) poly.Poly {
 	// like an array of the final polynomials :)
 	// maybe we should keep them all separate.
 	// i don't really know yet
-	var functionproduct []*poly.Poly
+	var functionproduct poly.Poly
+	// if we have this as a pointer it shouts at me when it gets assigned
+	var functiontemp poly.Poly
 
 	for i := 0; i < ringlength; i++ {
 		for j := uint(0); j < uint(len(ringbin)); j++ {
+			aj, e := rand.Int(rand.Reader, grouporder)
+			check(e)
 			if (i >> j & 0x1) == 0 {
+				var z *big.Int
 				if ((signerindex >> j) & 0x1) == 0 {
-					// f = x - aj (aj is bigint so might have to use .minus?)
-					functiontemp = poly.NewPolyInts(1, -a[j])
+					// f = x - aj
+					functiontemp = poly.NewPolyInts(1, int(z.Neg(aj).Int64()))
 				}
 				// otherwise it's just - aj
-				functiontemp = poly.NewPolyInts(0, -a[j])
+				functiontemp = poly.NewPolyInts(0, int(z.Neg(aj).Int64()))
 			}
 			if (i >> j & 0x1) == 1 {
 				if ((signerindex >> j) & 0x1) == 1 {
 					// f = x + aj
-					functiontemp = poly.NewPolyInts(1, a[j])
+					functiontemp = poly.NewPolyInts(1, int(aj.Int64()))
 				}
-				functiontemp = poly.NewPolyInts(0, a[j])
+				functiontemp = poly.NewPolyInts(0, int(aj.Int64()))
 			}
-			functionproduct = functiontemp.Multiply(functionproduct)
+			functionproduct = functiontemp.Mul(functionproduct, grouporder)
 		}
 	}
 	return poly.RandomPoly(int64(3), int64(3))
@@ -169,4 +176,10 @@ func convertPubKeys(rn RingStr) Ring {
 		ring.PubKeys = append(ring.PubKeys, PubKey{CurvePoint{pubkeyx, pubkeyy}})
 	}
 	return ring
+}
+
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }

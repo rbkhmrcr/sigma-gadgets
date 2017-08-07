@@ -13,31 +13,37 @@ import (
 	//	"strconv"
 )
 
+// S is the KoblitzCurve group from btcec ?
 var S *secp.KoblitzCurve
 
 // we need a curve point type so that curve points are just one thing
 // as opposed to being representing by their bigint affine coordinates x, y :)
 // we should leave off the json bit for prototyping no?
 
+// CurvePoint lets us use the bigint affine point rep as one var not two :)
 type CurvePoint struct {
 	X *big.Int `json:"x"`
-	Y *big.Int `json:'y"`
+	Y *big.Int `json:"y"`
 }
 
+// String takes a CurvePoint and converts to a string for pretty printing (& interfacing?)
 func (c CurvePoint) String() string {
 	return fmt.Sprintf("X: %s, Y: %s", c.X, c.Y)
 }
 
+// ScalarBaseMult lets us do g.mult(scalar) from btcec with CurvePoints rather than (x, y)
 func (c CurvePoint) ScalarBaseMult(x *big.Int) CurvePoint {
 	px, py := S.ScalarBaseMult(x.Bytes())
 	return CurvePoint{px, py}
 }
 
+// ScalarMult lets us do point.mult(scalar) from btcec with CurvePoints rather than (x, y)
 func (c CurvePoint) ScalarMult(x *big.Int) CurvePoint {
 	px, py := S.ScalarMult(c.X, c.Y, x.Bytes())
 	return CurvePoint{px, py}
 }
 
+// Add lets us do point1.Add(point2) from btcec with CurvePoints rather than (x, y)
 func (c CurvePoint) Add(y CurvePoint) CurvePoint {
 	px, py := S.Add(c.X, c.Y, y.X, y.Y)
 	return CurvePoint{px, py}

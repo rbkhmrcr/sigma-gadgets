@@ -109,7 +109,7 @@ func main() {
 	// it shoud defs be changed irl
 	for i := 0; i < len(sk.Keys); i++ {
 		var polyarray []poly.Poly
-		randompoly := polynomialbuilder(int(3), int(5))
+		randompoly := polynomialbuilder(int(3), int(5), int(i))
 		// we build polyarray like p[0][k], p[1][k], ...
 		polyarray = append(polyarray, randompoly)
 		fmt.Println(polyarray)
@@ -117,7 +117,7 @@ func main() {
 
 }
 
-func polynomialbuilder(signerindex int, ringsize int) poly.Poly {
+func polynomialbuilder(signerindex int, ringsize int, i int) poly.Poly {
 
 	// this is just to print and get the bit length, n
 	signerindexbin := strconv.FormatInt(int64(signerindex), 2)
@@ -130,73 +130,63 @@ func polynomialbuilder(signerindex int, ringsize int) poly.Poly {
 	// ------------------------------------------------------------------------------
 	// is it gonna cause problems that we're running 0 -> n - 1 rather than 1 -> n :(
 
-	for j := uint(0); j < uint(len(ringbin)); j++ {
-		fmt.Println((signerindex >> j) & 0x1)
-	}
 	var product poly.Poly
+	var polyarray []poly.Poly
+	// the products of functions defined by each i form distinct polynomials (one per i)
+	// this polynomial will have degree max bitlength(ringlength)
 
-	// i is the key index.
-	for i := 0; i < ringsize; i++ {
+	// j is the bit index.
+	// the functions defined in this bit get multiplied together to form the poly above
+	for j := uint(0); j < uint(len(ringbin)); j++ {
 
-		var polyarray []poly.Poly
-		// the products of functions defined by each i form distinct polynomials (one per i)
-		// this polynomial will have degree max bitlength(ringlength)
+		var functiontemp poly.Poly
+		aj, e := rand.Int(rand.Reader, grouporder)
+		check(e)
+		z, e := rand.Int(rand.Reader, grouporder)
+		check(e)
 
-		// j is the bit index.
-		// the functions defined in this bit get multiplied together to form the poly above
-		for j := uint(0); j < uint(len(ringbin)); j++ {
-
-			var functiontemp poly.Poly
-			aj, e := rand.Int(rand.Reader, grouporder)
-			check(e)
-			z, e := rand.Int(rand.Reader, grouporder)
-			check(e)
-
-			// we compare i (the current index) to l (the signer index), bitwise
-			if (i >> j & 0x1) == 0 {
-				if ((signerindex >> j) & 0x1) == 0 {
-					// f = x - aj
-					functiontemp = append(functiontemp, z.ModInverse(aj, grouporder))
-					functiontemp = append(functiontemp, big.NewInt(1))
-				}
-				if ((signerindex >> j) & 0x1) == 1 {
-					// otherwise it's just - aj
-					functiontemp = append(functiontemp, z.ModInverse(aj, grouporder))
-					functiontemp = append(functiontemp, big.NewInt(0))
-				}
+		// we compare i (the current index) to l (the signer index), bitwise
+		if (i >> j & 0x1) == 0 {
+			if ((signerindex >> j) & 0x1) == 0 {
+				// f = x - aj
+				functiontemp = append(functiontemp, z.ModInverse(aj, grouporder))
+				functiontemp = append(functiontemp, big.NewInt(1))
 			}
-
-			if (i >> j & 0x1) == 1 {
-				if ((signerindex >> j) & 0x1) == 1 {
-					// f = x + aj
-					// this mod is super redundant
-					functiontemp = append(functiontemp, z.Mod(aj, grouporder))
-					functiontemp = append(functiontemp, big.NewInt(1))
-				}
-				if ((signerindex >> j) & 0x1) == 0 {
-					// otherwise it's just aj
-					// this mod is super redundant
-					functiontemp = append(functiontemp, z.Mod(aj, grouporder))
-					functiontemp = append(functiontemp, big.NewInt(0))
-				}
-			}
-
-			if j == 0 {
-				// i should do this in some prettier way hey?
-				product = poly.NewPolyInts(0, 0, 0, 0, 0)
-				product = functiontemp
-			} else {
-				product = product.Mul(functiontemp, grouporder)
+			if ((signerindex >> j) & 0x1) == 1 {
+				// otherwise it's just - aj
+				functiontemp = append(functiontemp, z.ModInverse(aj, grouporder))
+				functiontemp = append(functiontemp, big.NewInt(0))
 			}
 		}
 
-		polyarray = append(polyarray, product)
-		fmt.Println(polyarray)
+		if (i >> j & 0x1) == 1 {
+			if ((signerindex >> j) & 0x1) == 1 {
+				// f = x + aj
+				// this mod is super redundant
+				functiontemp = append(functiontemp, z.Mod(aj, grouporder))
+				functiontemp = append(functiontemp, big.NewInt(1))
+			}
+			if ((signerindex >> j) & 0x1) == 0 {
+				// otherwise it's just aj
+				// this mod is super redundant
+				functiontemp = append(functiontemp, z.Mod(aj, grouporder))
+				functiontemp = append(functiontemp, big.NewInt(0))
+			}
+		}
 
+		if j == 0 {
+			// i should do this in some prettier way hey?
+			product = poly.NewPolyInts(0, 0, 0, 0, 0)
+			product = functiontemp
+		} else {
+			product = product.Mul(functiontemp, grouporder)
+		}
 	}
-	return product
 
-	// we need to save all the poly arrays to one big array so we can access them by poly[i][k] etc :)
+	polyarray = append(polyarray, product)
+	fmt.Println(polyarray)
+
+	return product
 
 }
 

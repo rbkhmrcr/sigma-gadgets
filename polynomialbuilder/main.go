@@ -105,10 +105,15 @@ func main() {
 		fmt.Println(privbn)
 
 	}
-	// we should have these numbers read in from the files etc etc etc
-	randompoly := polynomialbuilder(int(3), int(5))
-
-	fmt.Println(randompoly)
+	// len(sk.Keys) is a silly hacky way of getting the ring size.
+	// it shoud defs be changed irl
+	for i := 0; i < len(sk.Keys); i++ {
+		var polyarray []poly.Poly
+		randompoly := polynomialbuilder(int(3), int(5))
+		// we build polyarray like p[0][k], p[1][k], ...
+		polyarray = append(polyarray, randompoly)
+		fmt.Println(polyarray)
+	}
 
 }
 
@@ -128,12 +133,12 @@ func polynomialbuilder(signerindex int, ringsize int) poly.Poly {
 	for j := uint(0); j < uint(len(ringbin)); j++ {
 		fmt.Println((signerindex >> j) & 0x1)
 	}
+	var product poly.Poly
 
 	// i is the key index.
 	for i := 0; i < ringsize; i++ {
 
 		var polyarray []poly.Poly
-		var product poly.Poly
 		// the products of functions defined by each i form distinct polynomials (one per i)
 		// this polynomial will have degree max bitlength(ringlength)
 
@@ -189,10 +194,10 @@ func polynomialbuilder(signerindex int, ringsize int) poly.Poly {
 		fmt.Println(polyarray)
 
 	}
+	return product
 
 	// we need to save all the poly arrays to one big array so we can access them by poly[i][k] etc :)
 
-	return poly.RandomPoly(int64(ringsize), int64(3))
 }
 
 func convertPubKeys(rn RingStr) Ring {

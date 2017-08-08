@@ -4,10 +4,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	//	"errors"
+	"errors"
 	"fmt"
 	secp "github.com/btcsuite/btcd/btcec"
 	poly "github.com/jongukim/polynomial"
+	"golang.org/x/crypto/sha3"
 	"io/ioutil"
 	//	"math"
 	"math/big"
@@ -18,6 +19,7 @@ import (
 var S *secp.KoblitzCurve
 var group = secp.S256()
 var grouporder = group.N
+var H, _ = HashToCurve([]byte("i am a stupid moron"))
 
 // we need a curve point type so that curve points are just one thing
 // as opposed to being representing by their bigint affine coordinates x, y :)
@@ -91,7 +93,7 @@ func main() {
 	if err = json.Unmarshal(keyfile, &pk); err != nil {
 		panic(err)
 	}
-	pubkeys := convertPubKeys(pk)
+	pubkeys := ConvertPubKeys(pk)
 	fmt.Println(pubkeys)
 
 	// now we unwrap all the private keys
@@ -108,7 +110,7 @@ func main() {
 	// it should defs be changed irl
 	var polyarray []poly.Poly
 	for i := 0; i < len(sk.Keys); i++ {
-		randompoly := polynomialbuilder(int(3), len(sk.Keys), int(i))
+		randompoly := PolynomialBuilder(int(3), len(sk.Keys), int(i))
 		// we build polyarray like p[0][k], p[1][k], ...
 		polyarray = append(polyarray, randompoly)
 	}
@@ -116,13 +118,68 @@ func main() {
 
 }
 
-func polynomialbuilder(signerindex int, ringsize int, i int) poly.Poly {
+/*
+
+
+func Mint() CurvePoint, *big.Int, *big.Int {
+	privkey, e := rand.Int(rand.Reader, grouporder)
+	check(e)
+	serial, e := rand.Int(rand.Reader, grouporder)
+	check(e)
+	c := commit(serial, privkey)
+	return c, privkey, serial
+}
+
+func Spend(pp, M, c, C) *big.Int {
+}
+
+func Verify(pp, M, serial, C, pi) {
+}
+
+
+*/
+
+func Commit(a *big.Int, b *big.Int) CurvePoint {
+	ha := H.ScalarMult(a)
+	gb := CurvePoint{}.ScalarBaseMult(b)
+	return ha.Add(gb)
+}
+
+func HashToCurve(s []byte) (CurvePoint, error) {
+	q := group.P
+	x := big.NewInt(0)
+	y := big.NewInt(0)
+	z := big.NewInt(0)
+	// what is this magical number
+	z.SetString("57896044618658097711785492504343953926634992332820282019728792003954417335832", 10)
+
+	// sum256 outputs an array of 32 bytes :) => are we menna use   keccak? does this work?
+	array := sha3.Sum256(s)
+	x = Convert(array[:])
+	for true {
+		xcubed := new(big.Int).Exp(x, big.NewInt(3), q)
+		xcubed7 := new(big.Int).Add(xcubed, big.NewInt(7))
+		y.ModSqrt(xcubed7, q)
+		y.Set(q)
+		y.Add(y, big.NewInt(1))
+		y.Rsh(y, 2)
+		y.Exp(xcubed7, y, q)
+		z = z.Exp(y, big.NewInt(2), q)
+		posspoint := S.IsOnCurve(x, y)
+		if posspoint == true {
+			return CurvePoint{x, y}, nil
+		}
+		x.Add(x, big.NewInt(1))
+	}
+	return CurvePoint{}, errors.New("no curve point found")
+}
+
+func PolynomialBuilder(signerindex int, ringsize int, i int) poly.Poly {
 
 	// this is just to print and get the bit length, n
 	// signerindexbin := strconv.FormatInt(int64(signerindex), 2)
 	ringbin := strconv.FormatInt(int64(ringsize), 2)
 	var product poly.Poly
-	var polyarray []poly.Poly
 	// the products of functions defined by each i form distinct polynomials (one per i)
 	// this polynomial will have degree max bitlength(ringlength)
 
@@ -137,9 +194,9 @@ func polynomialbuilder(signerindex int, ringsize int, i int) poly.Poly {
 
 		var functiontemp poly.Poly
 		aj, e := rand.Int(rand.Reader, grouporder)
-		check(e)
+		Check(e)
 		z, e := rand.Int(rand.Reader, grouporder)
-		check(e)
+		Check(e)
 
 		// we compare i (the current index) to l (the signer index), bitwise
 		if (i >> j & 0x1) == 0 {
@@ -178,15 +235,10 @@ func polynomialbuilder(signerindex int, ringsize int, i int) poly.Poly {
 			product = product.Mul(functiontemp, grouporder)
 		}
 	}
-
-	polyarray = append(polyarray, product)
-	fmt.Println(polyarray)
-
 	return product
-
 }
 
-func convertPubKeys(rn RingStr) Ring {
+func ConvertPubKeys(rn RingStr) Ring {
 
 	rl := len(rn.PubKeys)
 	//fmt.Println("Length : ", rl)
@@ -204,7 +256,13 @@ func convertPubKeys(rn RingStr) Ring {
 	return ring
 }
 
-func check(e error) {
+func Convert(data []byte) *big.Int {
+	z := new(big.Int)
+	z.SetBytes(data)
+	return z
+}
+
+func Check(e error) {
 	if e != nil {
 		panic(e)
 	}

@@ -95,8 +95,11 @@ func main() {
 	if err = json.Unmarshal(keyfile, &pk); err != nil {
 		panic(err)
 	}
-	// pubkeys := ConvertPubKeys(pk)
-
+	pubkeys := ConvertPubKeys(pk)
+	privkey := big.NewInt(0)
+	privkey.SetString("23246495091784532220524749001303194962250020895499760086019834032589186452479", 10)
+	proof := Prover(pubkeys, 3, 2, privkey)
+	fmt.Println(proof)
 	/* now we unwrap all the private keys
 	for i := 0; i < len(sk.Keys); i++ {
 		privbytes, err := hex.DecodeString(sk.Keys[i])
@@ -173,6 +176,8 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) []C
 		// set to the ones that are needed? is this lots of unnecessary array fetching?
 
 		// clj = lj * g + rj * h
+		fmt.Println("HELLLLOOOOOOOOOO")
+		fmt.Println(big.NewInt(int64(((signerindex >> j) & 0x1))))
 		commitments = append(commitments, Commit(big.NewInt(int64(((signerindex>>j)&0x1))), randomvars[5*j]))
 		// clj will be commitments[3*j]
 

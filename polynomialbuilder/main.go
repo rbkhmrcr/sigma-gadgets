@@ -95,19 +95,18 @@ func main() {
 	if err = json.Unmarshal(keyfile, &pk); err != nil {
 		panic(err)
 	}
-	pubkeys := ConvertPubKeys(pk)
-	fmt.Println(pubkeys)
+	// pubkeys := ConvertPubKeys(pk)
 
-	// now we unwrap all the private keys
+	/* now we unwrap all the private keys
 	for i := 0; i < len(sk.Keys); i++ {
 		privbytes, err := hex.DecodeString(sk.Keys[i])
 		if err != nil {
 			panic(err)
 		}
 		privbn := new(big.Int).SetBytes(privbytes)
-		fmt.Println(privbn)
-
 	}
+	*/
+
 	// len(sk.Keys) is a silly hacky way of getting the ring size.
 	// it should defs be changed irl
 	var polyarray []poly.Poly
@@ -122,7 +121,6 @@ func main() {
 
 /*
 
-
 func Mint() CurvePoint, *big.Int, *big.Int {
 	privkey, e := rand.Int(rand.Reader, grouporder)
 	check(e)
@@ -135,17 +133,79 @@ func Mint() CurvePoint, *big.Int, *big.Int {
 func Spend(pp, M, c, C) *big.Int {
 }
 
-func Verify(pp, M, serial, C, pi) {
+func SpendVerify(pp, M, serial, C, pi) {
 }
-
 
 */
 
+// Prover is the gk prover routine. it's needed in ring signatures and stuff.
+// if Ring has a length (?) then we don't need to submit the length separately :)
+func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) []CurvePoint {
+
+	ringbin := strconv.FormatInt(int64(ringlength), 2)
+	n := uint(len(ringbin))
+	randomvars := make([]*big.Int, 5*n)
+	commitments := make([]CurvePoint, 5*n)
+	// j is the bitwise index, always :) in the paper it's 1, ..., n, but we'll count from 0.
+	for j := uint(0); j < n; j++ {
+		// we could use a for loop here with i from 0 to 4 ?
+		rj, e := rand.Int(rand.Reader, grouporder)
+		Check(e)
+		randomvars = append(randomvars, rj)
+		// so r[j] will be randomvars[5*j]
+		aj, e := rand.Int(rand.Reader, grouporder)
+		Check(e)
+		randomvars = append(randomvars, aj)
+		// so a[j] will be randomvars[5*j + 1]
+		sj, e := rand.Int(rand.Reader, grouporder)
+		Check(e)
+		randomvars = append(randomvars, sj)
+		// so s[j] will be randomvars[5*j + 2]
+		tj, e := rand.Int(rand.Reader, grouporder)
+		Check(e)
+		randomvars = append(randomvars, tj)
+		// so t[j] will be randomvars[5*j + 3]
+		rhok, e := rand.Int(rand.Reader, grouporder)
+		Check(e)
+		randomvars = append(randomvars, rhok)
+		// so rho[k] will be randomvars[5*j + 4]
+		// should these actually not just use the variables aj, sj, etc, as they are still
+		// set to the ones that are needed? is this lots of unnecessary array fetching?
+
+		// clj = lj * g + rj * h
+		commitments = append(commitments, Commit(big.NewInt(int64(((signerindex>>j)&0x1))), randomvars[5*j]))
+		// clj will be commitments[3*j]
+
+		// caj = aj * g + sj * h
+		commitments = append(commitments, Commit(randomvars[5*j+1], randomvars[5*j+2]))
+		// caj will be commitments[3*j + 1]
+
+		// cbj = (lj * aj) * g + tj * h
+		z := new(big.Int)
+		commitments = append(commitments, Commit(z.Add(big.NewInt(int64((signerindex>>j)&0x1)), randomvars[5*j+1]), randomvars[5*j+3]))
+
+		// cdk = (for i = 0, ..., N-1) p[i][k] * ci    +      0 * g + rhok * h
+		for i := 0; i < ringlength; i++ {
+			polytemp := PolynomialBuilder(signerindex, ringlength, i)
+			cdklhs := (ring.PubKeys[i]).ScalarMult(polytemp[j])
+			var producttemp CurvePoint
+			if i == 0 {
+				producttemp = ring.PubKeys[i].ScalarMult(polytemp[j])
+			} else {
+				z := producttemp.Add(cdklhs)
+				producttemp = z
+			}
+		}
+	}
+
+	return commitments
+}
+
 // Commit forms & returns a pedersen commitment with the two arguments given
 func Commit(a *big.Int, b *big.Int) CurvePoint {
-	ha := H.ScalarMult(a)
-	gb := CurvePoint{}.ScalarBaseMult(b)
-	return ha.Add(gb)
+	ga := CurvePoint{}.ScalarBaseMult(a)
+	hb := H.ScalarMult(b)
+	return hb.Add(ga)
 }
 
 // HashToCurve takes a byteslice and returns a CurvePoint (whose DL remains unknown!)

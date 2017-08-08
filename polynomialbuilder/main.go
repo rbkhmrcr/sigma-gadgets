@@ -105,7 +105,7 @@ func main() {
 
 	}
 	// len(sk.Keys) is a silly hacky way of getting the ring size.
-	// it shoud defs be changed irl
+	// it should defs be changed irl
 	var polyarray []poly.Poly
 	for i := 0; i < len(sk.Keys); i++ {
 		randompoly := polynomialbuilder(int(3), len(sk.Keys), int(i))

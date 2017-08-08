@@ -15,10 +15,9 @@ import (
 	"strconv"
 )
 
-// S is KoblitzCurve from btcec
-var S *secp.KoblitzCurve
-var group = secp.S256()
-var grouporder = group.N
+// Group is secp256k1 as defined in btcec
+var Group = secp.S256()
+var grouporder = Group.N
 
 // H is an EC point with unknown DL
 var H, _ = HashToCurve([]byte("i am a stupid moron"))
@@ -39,19 +38,19 @@ func (c CurvePoint) String() string {
 
 // ScalarBaseMult lets us do g.mult(scalar) from btcec with CurvePoints rather than (x, y)
 func (c CurvePoint) ScalarBaseMult(x *big.Int) CurvePoint {
-	px, py := S.ScalarBaseMult(x.Bytes())
+	px, py := Group.ScalarBaseMult(x.Bytes())
 	return CurvePoint{px, py}
 }
 
 // ScalarMult lets us do point.mult(scalar) from btcec with CurvePoints rather than (x, y)
 func (c CurvePoint) ScalarMult(x *big.Int) CurvePoint {
-	px, py := S.ScalarMult(c.X, c.Y, x.Bytes())
+	px, py := Group.ScalarMult(c.X, c.Y, x.Bytes())
 	return CurvePoint{px, py}
 }
 
 // Add lets us do point1.Add(point2) from btcec with CurvePoints rather than (x, y)
 func (c CurvePoint) Add(y CurvePoint) CurvePoint {
-	px, py := S.Add(c.X, c.Y, y.X, y.Y)
+	px, py := Group.Add(c.X, c.Y, y.X, y.Y)
 	return CurvePoint{px, py}
 }
 
@@ -99,7 +98,7 @@ func main() {
 	privkey := big.NewInt(0)
 	privkey.SetString("23246495091784532220524749001303194962250020895499760086019834032589186452479", 10)
 	proof := Prover(pubkeys, 3, 2, privkey)
-	fmt.Println(proof)
+	fmt.Println("proof : ", proof)
 	/* now we unwrap all the private keys
 	for i := 0; i < len(sk.Keys); i++ {
 		privbytes, err := hex.DecodeString(sk.Keys[i])
@@ -147,8 +146,8 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) []C
 
 	ringbin := strconv.FormatInt(int64(ringlength), 2)
 	n := uint(len(ringbin))
-	randomvars := make([]*big.Int, 5*n)
-	commitments := make([]CurvePoint, 5*n)
+	randomvars := make([]*big.Int, 0)
+	commitments := make([]CurvePoint, 0)
 	// j is the bitwise index, always :) in the paper it's 1, ..., n, but we'll count from 0.
 	for j := uint(0); j < n; j++ {
 		// we could use a for loop here with i from 0 to 4 ?
@@ -176,9 +175,9 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) []C
 		// set to the ones that are needed? is this lots of unnecessary array fetching?
 
 		// clj = lj * g + rj * h
-		fmt.Println("HELLLLOOOOOOOOOO")
-		fmt.Println(big.NewInt(int64(((signerindex >> j) & 0x1))))
-		commitments = append(commitments, Commit(big.NewInt(int64(((signerindex>>j)&0x1))), randomvars[5*j]))
+		bigintbit := big.NewInt(int64(((signerindex >> j) & 0x1)))
+		newcommitment := Commit(bigintbit, randomvars[5*j])
+		commitments = append(commitments, newcommitment)
 		// clj will be commitments[3*j]
 
 		// caj = aj * g + sj * h
@@ -190,16 +189,28 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) []C
 		commitments = append(commitments, Commit(z.Add(big.NewInt(int64((signerindex>>j)&0x1)), randomvars[5*j+1]), randomvars[5*j+3]))
 
 		// cdk = (for i = 0, ..., N-1) p[i][k] * ci    +      0 * g + rhok * h
+		// product temp is p[i][k] * c[i]
+		var producttemp CurvePoint
 		for i := 0; i < ringlength; i++ {
+			// polytemp is p[i][k]
 			polytemp := PolynomialBuilder(signerindex, ringlength, i)
+			// cdk lhs is p[i][k] * c[i] for a given i
+			fmt.Println("signerindex : ", signerindex)
+			fmt.Println("i : ", i)
+			fmt.Println("j : ", j)
+			fmt.Println("poly : ", polytemp)
 			cdklhs := (ring.PubKeys[i]).ScalarMult(polytemp[j])
-			var producttemp CurvePoint
+
 			if i == 0 {
+				// each type we loop through the k and start on a new i we reset the product
 				producttemp = ring.PubKeys[i].ScalarMult(polytemp[j])
 			} else {
+				// we're using EC points so multiplication is really addition
+				// this is adding the latest p[i][k] * c[i] to the previous ones (for given k)
 				z := producttemp.Add(cdklhs)
 				producttemp = z
 			}
+
 		}
 	}
 
@@ -215,7 +226,7 @@ func Commit(a *big.Int, b *big.Int) CurvePoint {
 
 // HashToCurve takes a byteslice and returns a CurvePoint (whose DL remains unknown!)
 func HashToCurve(s []byte) (CurvePoint, error) {
-	q := group.P
+	q := Group.P
 	x := big.NewInt(0)
 	y := big.NewInt(0)
 	z := big.NewInt(0)
@@ -234,7 +245,7 @@ func HashToCurve(s []byte) (CurvePoint, error) {
 		y.Rsh(y, 2)
 		y.Exp(xcubed7, y, q)
 		z = z.Exp(y, big.NewInt(2), q)
-		posspoint := S.IsOnCurve(x, y)
+		posspoint := Group.IsOnCurve(x, y)
 		if posspoint == true {
 			return CurvePoint{x, y}, nil
 		}
@@ -244,11 +255,12 @@ func HashToCurve(s []byte) (CurvePoint, error) {
 }
 
 // PolynomialBuilder builds the weird polynomials we need in the GK proving algo
-func PolynomialBuilder(signerindex int, ringsize int, i int) poly.Poly {
+func PolynomialBuilder(signerindex int, ringsize int, currenti int) poly.Poly {
 
 	// this is just to print and get the bit length, n
 	// signerindexbin := strconv.FormatInt(int64(signerindex), 2)
 	ringbin := strconv.FormatInt(int64(ringsize), 2)
+	// the product should be of length = bitlength(ringsize)
 	var product poly.Poly
 	// the products of functions defined by each i form distinct polynomials (one per i)
 	// this polynomial will have degree max bitlength(ringlength)
@@ -269,7 +281,7 @@ func PolynomialBuilder(signerindex int, ringsize int, i int) poly.Poly {
 		Check(e)
 
 		// we compare i (the current index) to l (the signer index), bitwise
-		if (i >> j & 0x1) == 0 {
+		if (currenti >> j & 0x1) == 0 {
 			if ((signerindex >> j) & 0x1) == 0 {
 				// f = x - aj
 				functiontemp = append(functiontemp, z.ModInverse(aj, grouporder))
@@ -282,7 +294,7 @@ func PolynomialBuilder(signerindex int, ringsize int, i int) poly.Poly {
 			}
 		}
 
-		if (i >> j & 0x1) == 1 {
+		if (currenti >> j & 0x1) == 1 {
 			if ((signerindex >> j) & 0x1) == 1 {
 				// f = x + aj
 				// this mod is super redundant
@@ -299,10 +311,16 @@ func PolynomialBuilder(signerindex int, ringsize int, i int) poly.Poly {
 
 		if j == 0 {
 			// i should do this in some prettier way hey?
-			product = poly.NewPolyInts(0, 0, 0, 0, 0)
+			// is there a way to make sure the polynomials are always a certain length
+			// even is lots of entries are 0? :/
+			product = poly.NewPolyInts(0)
 			product = functiontemp
 		} else {
 			product = product.Mul(functiontemp, grouporder)
+			product = append(product, big.NewInt(0))
+			product = append(product, big.NewInt(0))
+			product = append(product, big.NewInt(0))
+			product = append(product, big.NewInt(0))
 		}
 	}
 	return product

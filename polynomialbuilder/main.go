@@ -14,14 +14,13 @@ import (
 	"strconv"
 )
 
-// S is the KoblitzCurve group from btcec ?
+// S is KoblitzCurve from btcec
 var S *secp.KoblitzCurve
 var group = secp.S256()
 var grouporder = group.N
 
 // we need a curve point type so that curve points are just one thing
 // as opposed to being representing by their bigint affine coordinates x, y :)
-// we should leave off the json bit for prototyping no?
 
 // CurvePoint lets us use the bigint affine point rep as one var not two :)
 type CurvePoint struct {
@@ -107,33 +106,30 @@ func main() {
 	}
 	// len(sk.Keys) is a silly hacky way of getting the ring size.
 	// it shoud defs be changed irl
+	var polyarray []poly.Poly
 	for i := 0; i < len(sk.Keys); i++ {
-		var polyarray []poly.Poly
-		randompoly := polynomialbuilder(int(3), int(5), int(i))
+		randompoly := polynomialbuilder(int(3), len(sk.Keys), int(i))
 		// we build polyarray like p[0][k], p[1][k], ...
 		polyarray = append(polyarray, randompoly)
-		fmt.Println(polyarray)
 	}
+	fmt.Println(polyarray)
 
 }
 
 func polynomialbuilder(signerindex int, ringsize int, i int) poly.Poly {
 
 	// this is just to print and get the bit length, n
-	signerindexbin := strconv.FormatInt(int64(signerindex), 2)
+	// signerindexbin := strconv.FormatInt(int64(signerindex), 2)
 	ringbin := strconv.FormatInt(int64(ringsize), 2)
-	fmt.Println(signerindexbin)
-	fmt.Println(len(ringbin))
+	var product poly.Poly
+	var polyarray []poly.Poly
+	// the products of functions defined by each i form distinct polynomials (one per i)
+	// this polynomial will have degree max bitlength(ringlength)
 
 	// things need to be uint so the bitshifting works
 	// len(ringbin) = n
 	// ------------------------------------------------------------------------------
 	// is it gonna cause problems that we're running 0 -> n - 1 rather than 1 -> n :(
-
-	var product poly.Poly
-	var polyarray []poly.Poly
-	// the products of functions defined by each i form distinct polynomials (one per i)
-	// this polynomial will have degree max bitlength(ringlength)
 
 	// j is the bit index.
 	// the functions defined in this bit get multiplied together to form the poly above

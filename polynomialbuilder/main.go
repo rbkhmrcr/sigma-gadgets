@@ -19,6 +19,8 @@ import (
 var S *secp.KoblitzCurve
 var group = secp.S256()
 var grouporder = group.N
+
+// H is an EC point with unknown DL
 var H, _ = HashToCurve([]byte("i am a stupid moron"))
 
 // we need a curve point type so that curve points are just one thing

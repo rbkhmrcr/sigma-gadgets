@@ -139,12 +139,14 @@ func Verify(pp, M, serial, C, pi) {
 
 */
 
+// Commit forms & returns a pedersen commitment with the two arguments given
 func Commit(a *big.Int, b *big.Int) CurvePoint {
 	ha := H.ScalarMult(a)
 	gb := CurvePoint{}.ScalarBaseMult(b)
 	return ha.Add(gb)
 }
 
+// HashToCurve takes a byteslice and returns a CurvePoint (whose DL remains unknown!)
 func HashToCurve(s []byte) (CurvePoint, error) {
 	q := group.P
 	x := big.NewInt(0)
@@ -174,6 +176,7 @@ func HashToCurve(s []byte) (CurvePoint, error) {
 	return CurvePoint{}, errors.New("no curve point found")
 }
 
+// PolynomialBuilder builds the weird polynomials we need in the GK proving algo
 func PolynomialBuilder(signerindex int, ringsize int, i int) poly.Poly {
 
 	// this is just to print and get the bit length, n
@@ -238,6 +241,7 @@ func PolynomialBuilder(signerindex int, ringsize int, i int) poly.Poly {
 	return product
 }
 
+// ConvertPubKeys takes the string rep of coords ('x', 'y') and changes to *big.Ints
 func ConvertPubKeys(rn RingStr) Ring {
 
 	rl := len(rn.PubKeys)
@@ -256,12 +260,14 @@ func ConvertPubKeys(rn RingStr) Ring {
 	return ring
 }
 
+// Convert goes byte slice -> *big.Int
 func Convert(data []byte) *big.Int {
 	z := new(big.Int)
 	z.SetBytes(data)
 	return z
 }
 
+// Check just does rly trivial error handling
 func Check(e error) {
 	if e != nil {
 		panic(e)

@@ -96,10 +96,16 @@ func main() {
 	}
 	pubkeys := ConvertPubKeys(pk)
 	privkey := big.NewInt(0)
+	// ive just picked the 3rd (2nd counting from 0th) privkey here :)
+	// why havent i just read it from the file ??
 	privkey.SetString("23246495091784532220524749001303194962250020895499760086019834032589186452479", 10)
-	proof := Prover(pubkeys, 3, 2, privkey)
-	fmt.Println("proof : ", proof)
-	/* now we unwrap all the private keys
+	proofa, proofb, proofc := Prover(pubkeys, 3, 2, privkey)
+	fmt.Println("proofa : ", proofa)
+	fmt.Println("proofb : ", proofb)
+	fmt.Println("proofc : ", proofc)
+}
+
+/* now we unwrap all the private keys
 	for i := 0; i < len(sk.Keys); i++ {
 		privbytes, err := hex.DecodeString(sk.Keys[i])
 		if err != nil {
@@ -107,7 +113,6 @@ func main() {
 		}
 		privbn := new(big.Int).SetBytes(privbytes)
 	}
-	*/
 
 	// len(sk.Keys) is a silly hacky way of getting the ring size.
 	// it should defs be changed irl
@@ -121,7 +126,6 @@ func main() {
 
 }
 
-/*
 
 func Mint() CurvePoint, *big.Int, *big.Int {
 	privkey, e := rand.Int(rand.Reader, grouporder)
@@ -142,10 +146,15 @@ func SpendVerify(pp, M, serial, C, pi) {
 
 // Prover is the gk prover routine. it's needed in ring signatures and stuff.
 // if Ring has a length (?) then we don't need to submit the length separately :)
-func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) []CurvePoint {
+func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]CurvePoint, []*big.Int, *big.Int) {
+
+	/* -----------------------------------------
+	this is the first part of the sigma protocol
+	----------------------------------------- */
 
 	ringbin := strconv.FormatInt(int64(ringlength), 2)
-	n := uint(len(ringbin))
+	// TODO: check if the bitlength = n is correct!!
+	n := uint(len(ringbin) + 1)
 	randomvars := make([]*big.Int, 0)
 	commitments := make([]CurvePoint, 0)
 	// j is the bitwise index, always :) in the paper it's 1, ..., n, but we'll count from 0.
@@ -186,7 +195,7 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) []C
 
 		// cbj = (lj * aj) * g + tj * h
 		z := new(big.Int)
-		commitments = append(commitments, Commit(z.Add(big.NewInt(int64((signerindex>>j)&0x1)), randomvars[5*j+1]), randomvars[5*j+3]))
+		commitments = append(commitments, Commit(z.Add(bigintbit, randomvars[5*j+1]), randomvars[5*j+3]))
 
 		// cdk = (for i = 0, ..., N-1) p[i][k] * ci    +      0 * g + rhok * h
 		// product temp is p[i][k] * c[i]
@@ -210,11 +219,77 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) []C
 				z := producttemp.Add(cdklhs)
 				producttemp = z
 			}
-
 		}
+		// cdk = above product + 0 * g + rho * h
+		newcommitment = Commit(big.NewInt(0), randomvars[5*j+4])
+		commitments = append(commitments, newcommitment.Add(producttemp))
+
 	}
 
-	return commitments
+	/* ------------------------------------------
+	this is the second part of the sigma protocol
+	------------------------------------------ */
+
+	// should we just carry on the loop above? who cares
+	// we need to convert the challenge into a big int :(
+	array := sha3.Sum256([]byte("lots of cool stuff including the commitments"))
+	challenge := Convert(array[:])
+	var responses []*big.Int
+	for j := uint(0); j < n; j++ {
+
+		z := new(big.Int)
+		// fj = lj * x + aj
+		lj := big.NewInt(int64(((signerindex >> j) & 0x1)))
+		fj := z.Mul(lj, challenge)
+		fj = z.Add(fj, randomvars[5*j+1])
+		// should this be mod grouporder?
+		responses = append(responses, fj)
+
+		// zaj = rj * x + sj
+		// TODO: is using z like this weird??
+		z = new(big.Int)
+		zaj := z.Mul(randomvars[5*j], challenge)
+		zaj = z.Add(zaj, randomvars[5*j+2])
+		// should this be mod grouporder?
+		responses = append(responses, zaj)
+
+		// zbj = rj * (x - fj) + tj
+		z = new(big.Int)
+		zbj := z.Sub(challenge, fj)
+		zbj = z.Mul(randomvars[5*j], zbj)
+		zbj = z.Add(zbj, randomvars[5*j+3])
+		// should this be mod grouporder?
+		responses = append(responses, zbj)
+
+	}
+
+	// zd = r * x ** n - sum from k = 0 to k = n - 1 of rhok * x ** k
+	z := new(big.Int)
+	ztemp := new(big.Int)
+
+	// zd (lhs) = r * x ** n
+	zdlhs := z.Exp(challenge, big.NewInt(int64(n)), grouporder)
+	zdlhs = z.Mul(zdlhs, privatekey)
+
+	for k := uint(0); k < n; k++ {
+		zdrhs := new(big.Int)
+		// zd (rhs, a) = x ** k
+		zdrhsa := z.Exp(challenge, big.NewInt(int64(k)), grouporder)
+		// zd (rhs, b) = rhok * x ** k
+		zdrhsb := z.Mul(randomvars[5*k+4], zdrhsa)
+		fmt.Println("ZD before mod : ", zdrhs)
+		zdrhsb.Mod(zdrhs, grouporder)
+		fmt.Println("ZD after mod : ", zdrhs)
+		// TODO: MOD THIS LOL
+		// zd (rhs) = sum over k of the above
+		zdrhs = z.Add(zdrhs, zdrhsb)
+		ztemp = zdrhs
+		fmt.Println("ZD RHS : ", zdrhs)
+	}
+
+	zd := z.Sub(zdlhs, ztemp)
+
+	return commitments, responses, zd
 }
 
 // Commit forms & returns a pedersen commitment with the two arguments given
@@ -258,6 +333,7 @@ func HashToCurve(s []byte) (CurvePoint, error) {
 func PolynomialBuilder(signerindex int, ringsize int, currenti int) poly.Poly {
 
 	// this is just to print and get the bit length, n
+	// TODO: print this and see if its right
 	// signerindexbin := strconv.FormatInt(int64(signerindex), 2)
 	ringbin := strconv.FormatInt(int64(ringsize), 2)
 	// the product should be of length = bitlength(ringsize)

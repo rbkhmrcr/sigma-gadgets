@@ -97,7 +97,7 @@ func main() {
 	pubkeys := ConvertPubKeys(pk)
 	privkey := big.NewInt(0)
 	// ive just picked the 3rd (2nd counting from 0th) privkey here :)
-	// why havent i just read it from the file ??
+	// why not just read it from the file ?????
 	privkey.SetString("23246495091784532220524749001303194962250020895499760086019834032589186452479", 10)
 	proofa, proofb, proofc := Prover(pubkeys, 3, 2, privkey)
 	fmt.Println("proofa : ", proofa)

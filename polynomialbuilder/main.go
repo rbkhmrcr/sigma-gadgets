@@ -328,7 +328,6 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 		// (x * clj) + caj == commit(fj, zaj)
 		// (challenge * commitments[4*j]) + commitments[4*j + 1] == commit(responses[3*j], responses[3*j+1])
 		xc := (commitments[4*j]).ScalarMult(challenge)
-		fmt.Println("XC : ", xc)
 		lhs := xc.Add(commitments[4*j+1])
 		fmt.Println("LHS : ", lhs)
 		rhs := Commit(responses[3*j], responses[3*j+1])
@@ -338,7 +337,18 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 		}
 
 		// ((x - fj) * clj) + cbj == commit(0, zbj)
-		// ((challenge - responses[3*j]) * commitments[4*j]) + commitments[4*j+2]
+		// ((challenge - responses[3*j]) * commitments[4*j]) + commitments[4*j+2] == commit(0, responses[3*j+2])
+		z := new(big.Int)
+		xf := z.Sub(challenge, responses[3*j])
+		xf = z.Mod(xf, grouporder)
+		xfc := (commitments[4*j]).ScalarMult(xf)
+		lhs = xfc.Add(commitments[4*j+2])
+		fmt.Println("LHS : ", lhs)
+		rhs = Commit(big.NewInt(0), responses[3*j+2])
+		fmt.Println("RHS : ", rhs)
+		if rhs.X.Cmp(lhs.X) != 0 || rhs.Y.Cmp(lhs.Y) != 0 {
+			return false
+		}
 
 	}
 	return true

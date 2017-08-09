@@ -333,13 +333,14 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 		fmt.Println("LHS : ", lhs)
 		rhs := Commit(responses[3*j], responses[3*j+1])
 		fmt.Println("RHS : ", rhs)
-		if rhs.X == lhs.X {
-			fmt.Println("this actually makes verification true......")
+		if rhs.X.Cmp(lhs.X) != 0 || rhs.Y.Cmp(lhs.Y) != 0 {
 			return false
 		}
 
+		// ((x - fj) * clj) + cbj == commit(0, zbj)
+		// ((challenge - responses[3*j]) * commitments[4*j]) + commitments[4*j+2]
+
 	}
-	fmt.Println("you don't wanna be here")
 	return true
 }
 

@@ -241,7 +241,9 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 		// fj = lj * x + aj
 		lj := big.NewInt(int64(((signerindex >> j) & 0x1)))
 		fj := z.Mul(lj, challenge)
+		fj = z.Mod(fj, grouporder)
 		fj = z.Add(fj, randomvars[5*j+1])
+		fj = z.Mod(fj, grouporder)
 		// should this be mod grouporder?
 		responses = append(responses, fj)
 
@@ -249,15 +251,20 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 		// TODO: is using z like this weird??
 		z = new(big.Int)
 		zaj := z.Mul(randomvars[5*j], challenge)
+		zaj = z.Mod(zaj, grouporder)
 		zaj = z.Add(zaj, randomvars[5*j+2])
+		zaj = z.Mod(zaj, grouporder)
 		// should this be mod grouporder?
 		responses = append(responses, zaj)
 
 		// zbj = rj * (x - fj) + tj
 		z = new(big.Int)
 		zbj := z.Sub(challenge, fj)
+		zbj = z.Mod(zbj, grouporder)
 		zbj = z.Mul(randomvars[5*j], zbj)
+		zbj = z.Mod(zbj, grouporder)
 		zbj = z.Add(zbj, randomvars[5*j+3])
+		zbj = z.Mod(zbj, grouporder)
 		// should this be mod grouporder?
 		responses = append(responses, zbj)
 
@@ -266,28 +273,29 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 	// zd = r * x ** n - sum from k = 0 to k = n - 1 of rhok * x ** k
 	z := new(big.Int)
 	ztemp := new(big.Int)
+	zdsum := new(big.Int)
 
 	// zd (lhs) = r * x ** n
-	zdlhs := z.Exp(challenge, big.NewInt(int64(n)), grouporder)
-	zdlhs = z.Mul(zdlhs, privatekey)
+	rxn := z.Exp(challenge, big.NewInt(int64(n)), grouporder)
+	rxn = z.Mod(rxn, grouporder)
+	rxn = z.Mul(rxn, privatekey)
+	rxn = z.Mod(rxn, grouporder)
 
 	for k := uint(0); k < n; k++ {
-		zdrhs := new(big.Int)
-		// zd (rhs, a) = x ** k
-		zdrhsa := z.Exp(challenge, big.NewInt(int64(k)), grouporder)
-		// zd (rhs, b) = rhok * x ** k
-		zdrhsb := z.Mul(randomvars[5*k+4], zdrhsa)
-		fmt.Println("ZD before mod : ", zdrhs)
-		zdrhsb.Mod(zdrhs, grouporder)
-		fmt.Println("ZD after mod : ", zdrhs)
-		// TODO: MOD THIS LOL
-		// zd (rhs) = sum over k of the above
-		zdrhs = z.Add(zdrhs, zdrhsb)
-		ztemp = zdrhs
-		fmt.Println("ZD RHS : ", zdrhs)
+		z := new(big.Int)
+		// x ** k
+		xk := z.Exp(challenge, big.NewInt(int64(k)), grouporder)
+		// zd = SUM( rhok * x ** k )
+		zdelement := z.Mul(randomvars[5*k+4], xk)
+		zdelement = z.Mod(zdelement, grouporder)
+		// zd = sum over k of the above
+		zdsum = z.Add(zdsum, zdelement)
+		zdsum = z.Mod(zdsum, grouporder)
+		ztemp = zdsum
 	}
 
-	zd := z.Sub(zdlhs, ztemp)
+	zd := z.Sub(rxn, ztemp)
+	zd = z.Mod(zd, grouporder)
 
 	return commitments, responses, zd
 }

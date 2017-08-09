@@ -104,7 +104,7 @@ func main() {
 	fmt.Println("proofb : ", proofb)
 	fmt.Println("proofc : ", proofc)
 
-	pv := Verify(pubkeys, proofa, proofb, proofc)
+	pv := Verify(pubkeys, 3, proofa, proofb, proofc)
 	fmt.Println("verificaaaationnnnnnn : ", pv)
 }
 
@@ -252,7 +252,7 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 		fj = z.Mod(fj, grouporder)
 		fj = z.Add(fj, randomvars[5*j+1])
 		fj = z.Mod(fj, grouporder)
-		// should this be mod grouporder?
+		// so fj = responses[3*j]
 		responses = append(responses, fj)
 
 		// zaj = rj * x + sj
@@ -262,7 +262,7 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 		zaj = z.Mod(zaj, grouporder)
 		zaj = z.Add(zaj, randomvars[5*j+2])
 		zaj = z.Mod(zaj, grouporder)
-		// should this be mod grouporder?
+		// so zaj = responses[3*j + 1]
 		responses = append(responses, zaj)
 
 		// zbj = rj * (x - fj) + tj
@@ -273,7 +273,7 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 		zbj = z.Mod(zbj, grouporder)
 		zbj = z.Add(zbj, randomvars[5*j+3])
 		zbj = z.Mod(zbj, grouporder)
-		// should this be mod grouporder?
+		// so zbj = responses[3*j + 2]
 		responses = append(responses, zbj)
 
 	}
@@ -309,16 +309,34 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 }
 
 // Verify is the gk **proof** verification. (contrast with SpendVerify)
-func Verify(ring Ring, commitments []CurvePoint, responses []*big.Int, zd *big.Int) bool {
+func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*big.Int, zd *big.Int) bool {
 	for i := 0; i < len(commitments); i++ {
 		check := Group.IsOnCurve(commitments[i].X, commitments[i].Y)
 		if check == false {
 			return false
 		}
 	}
+
 	array := sha3.Sum256([]byte("lots of cool stuff including the commitments"))
 	challenge := Convert(array[:])
 	fmt.Println(challenge)
+	ringbin := strconv.FormatInt(int64(ringlength), 2)
+	// TODO: check if the bitlength = n is correct!!
+	n := int(len(ringbin) + 1)
+
+	for j := 0; j < n; j++ {
+		// (x * clj) + caj == commit(fj, zaj)
+		// (challenge * commitments[4*j]) + commitments[4*j + 1] == commit(responses[3*j], responses[3*j+1])
+		xc := (commitments[4*j]).ScalarMult(challenge)
+		fmt.Println("XC : ", xc)
+		lhs := xc.Add(commitments[4*j+1])
+		fmt.Println("LHS : ", lhs)
+		rhs := Commit(responses[3*j], responses[3*j+1])
+		fmt.Println("RHS : ", rhs)
+		if lhs != rhs {
+			return false
+		}
+	}
 
 	return true
 }

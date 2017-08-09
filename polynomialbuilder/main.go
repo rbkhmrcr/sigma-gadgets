@@ -103,6 +103,9 @@ func main() {
 	fmt.Println("proofa : ", proofa)
 	fmt.Println("proofb : ", proofb)
 	fmt.Println("proofc : ", proofc)
+
+	pv := Verify(pubkeys, proofa, proofb, proofc)
+	fmt.Println("verificaaaationnnnnnn : ", pv)
 }
 
 /* now we unwrap all the private keys
@@ -226,14 +229,19 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 
 	}
 
-	/* ------------------------------------------
-	this is the second part of the sigma protocol
-	------------------------------------------ */
+	/* ------------------------------------
+	this is where we generate the challenge
+	------------------------------------ */
 
 	// should we just carry on the loop above? who cares
 	// we need to convert the challenge into a big int :(
 	array := sha3.Sum256([]byte("lots of cool stuff including the commitments"))
 	challenge := Convert(array[:])
+
+	/* ------------------------------------------
+	this is the second part of the sigma protocol
+	------------------------------------------ */
+
 	var responses []*big.Int
 	for j := uint(0); j < n; j++ {
 
@@ -298,6 +306,21 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 	zd = z.Mod(zd, grouporder)
 
 	return commitments, responses, zd
+}
+
+// Verify is the gk **proof** verification. (contrast with SpendVerify)
+func Verify(ring Ring, commitments []CurvePoint, responses []*big.Int, zd *big.Int) bool {
+	for i := 0; i < len(commitments); i++ {
+		check := Group.IsOnCurve(commitments[i].X, commitments[i].Y)
+		if check == false {
+			return false
+		}
+	}
+	array := sha3.Sum256([]byte("lots of cool stuff including the commitments"))
+	challenge := Convert(array[:])
+	fmt.Println(challenge)
+
+	return true
 }
 
 // Commit forms & returns a pedersen commitment with the two arguments given

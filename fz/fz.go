@@ -1,14 +1,14 @@
 package main
 
 import (
-	secp "btcec" // dependencies can be changed to my package is this is ever any better
-	"crypto/rand"
-	"crypto/sha3" // we need a hash function that isn't vuln to length extension attacks
 	"bytes"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	secp "github.com/btcsuite/btcd/btcec" // dependencies can be changed to my package is this is ever any better
+	"golang.org/x/crypto/sha3"            // we need a hash function that isn't vuln to length extension attacks
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -16,7 +16,6 @@ import (
 )
 
 var Group *secp.KoblitzCurve
-
 
 // Should i have these as just numbers now for simplicity/testing? i guess putting
 // them in json is just as easy :) and better for testing!
@@ -26,7 +25,7 @@ type CurvePoint struct {
 }
 
 // Function to return stuff as strings so we can use them in eth transactions
-func (c CurvePoint) String string {
+func (c CurvePoint) String() string {
 	return fmt.Sprintf("X: %s, Y: %s", c.X, c.Y)
 }
 
@@ -44,7 +43,6 @@ func (c CurvePoint) Add(y CurvePoint) CurvePoint {
 	px, py := Group.Add(c.X, c.Y, y.X, y.Y)
 	return CurvePoint{px, py}
 }
-
 
 type PubKeyStr struct {
 	X string `json:"x"`
@@ -126,7 +124,6 @@ func (c CurvePoint) HashPointAdd(hashSP CurvePoint, tj *big.Int, cj *big.Int) Cu
 	return b.Add(bj)
 }
 
-
 func SignAndVerify(Rn Ring, privBN *big.Int, message []byte) {
 
 	pub := CurvePoint{}.ScalarBaseMult(privBN)
@@ -142,7 +139,7 @@ func SignAndVerify(Rn Ring, privBN *big.Int, message []byte) {
 		log.Fatal("signature failed to verify")
 	}
 
-  var ct []*big.Int
+	var ct []*big.Int
 
 	for i := 0; i < len(signature.Ctlist); i++ {
 		ct = append(ct, signature.Ctlist[i])
@@ -393,4 +390,3 @@ func HashToCurve(s []byte) (CurvePoint, error) {
 	}
 	return CurvePoint{}, errors.New("no curve point found")
 }
-

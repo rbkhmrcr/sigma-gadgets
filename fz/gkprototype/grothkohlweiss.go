@@ -189,9 +189,11 @@ func prove(ring Ring, sk *big.Int) {
 
 		x := sha3.Sum256([]byte("wow so much fun"))
 
-		fj := lj*x + aj // this is much prettier than the above isn't it.
-		zaj := rj*x + sj
-		zbj := rj*(x-fj) + tj
+		/*
+			fj := lj*x + aj // this is much prettier than the above isn't it. fj doesn't exist.
+			zaj := rj*x + sj
+			zbj := rj*(x - fj) + tj
+		*/
 
 		var sum *big.Int // should this be a pointer?
 		for k := 0; k < n; k++ {
@@ -271,7 +273,7 @@ func HashToCurve(s []byte) (CurvePoint, error) {
 		y.Set(q)
 		y.Add(y, big.NewInt(1))
 		y.Rsh(y, 2)
-		y.Exp(xcube7, y, q)
+		y.Exp(xcubed7, y, q)
 		z = z.Exp(y, big.NewInt(2), q)
 		posspoint := S.IsOnCurve(x, y)
 		if posspoint == true {

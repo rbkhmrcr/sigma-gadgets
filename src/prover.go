@@ -2,7 +2,7 @@ package main
 
 import (
 	"crypto/rand"
-	"fmt"
+	// "fmt"
 	"golang.org/x/crypto/sha3"
 	"math/big"
 	"strconv"
@@ -55,16 +55,16 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 
 		// caj = aj * g + sj * h
 		commitments = append(commitments, Commit(randomvars[5*j+1], randomvars[5*j+2]))
-		// caj will be commitments[3*j + 1]
+		// caj will be commitments[4*j + 1]
 
 		// cbj = (lj * aj) * g + tj * h
 		z := new(big.Int)
 		ljaj := z.Mul(bigintbit, randomvars[5*j+1])
 		ljaj = z.Mod(ljaj, grouporder)
-		fmt.Println("ljaj", ljaj)
 		commitments = append(commitments, Commit(ljaj, randomvars[5*j+3]))
+		// cbj will be commitments[4*j + 2]
 
-		// cdk = (for i = 0, ..., N-1) p[i][k] * ci    +      0 * g + rhok * h
+		// cdk = (for i = 0, ..., N-1) p[i][k] * ci + 0 * g + rhok * h
 		// product temp is p[i][k] * c[i]
 		var producttemp CurvePoint
 		for i := 0; i < ringlength; i++ {
@@ -82,7 +82,7 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 				producttemp = ring.PubKeys[i].ScalarMult(polytemp[j])
 			} else {
 				// we're using EC points so multiplication is really addition
-				// this is adding the latest p[i][k] * c[i] to the previous ones (for given k)
+				// this is adding p[i][k] * c[i] to the previous ones (for given k)
 				z := producttemp.Add(cdklhs)
 				producttemp = z
 			}
@@ -90,7 +90,7 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 		// cdk = above product + 0 * g + rho * h
 		newcommitment = Commit(big.NewInt(0), randomvars[5*j+4])
 		commitments = append(commitments, newcommitment.Add(producttemp))
-
+		// cdk will be commitments[4*j + 3]
 	}
 
 	/* ------------------------------------

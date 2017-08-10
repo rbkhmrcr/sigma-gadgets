@@ -24,38 +24,39 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 
 	for j := 0; j < n; j++ {
 		// (x * clj) + caj == commit(fj, zaj)
-		// (challenge * commitments[4*j]) + commitments[4*j + 1] == commit(responses[3*j], responses[3*j+1])
+		// (challenge * commitments[4*j]) + commitments[4*j + 1]
+		// == commit(responses[3*j], responses[3*j+1])
 		xc := (commitments[4*j]).ScalarMult(challenge)
 		lhs := xc.Add(commitments[4*j+1])
 		rhs := Commit(responses[3*j], responses[3*j+1])
 		if rhs.X.Cmp(lhs.X) != 0 || rhs.Y.Cmp(lhs.Y) != 0 {
 			return false
 		}
-		/*
-			// ((x - fj) * clj) + cbj == commit(0, zbj)
-			// ((challenge - responses[3*j]) * commitments[4*j]) + commitments[4*j+2] == commit(0, responses[3*j+2])
-			z := new(big.Int)
-			// challenge - responses[3*j]
-			xf := z.Sub(challenge, responses[3*j])
-			xf = z.Mod(xf, grouporder)
-			// ( challenge - responses[3*j] ) * commitments[4*j]
-			xfc := (commitments[4*j]).ScalarMult(xf)
-			// above + commitments[4*j+2]
-			lhs = xfc.Add(commitments[4*j+2])
-			fmt.Println("LHS : ", lhs)
-			// why doesn't this work :( */
+
+		// ((x - fj) * clj) + cbj == commit(0, zbj)
+		// ((challenge - responses[3*j]) * commitments[4*j]) + commitments[4*j+2]
+		// == commit(0, responses[3*j+2])
+		z := new(big.Int)
+		// challenge - responses[3*j]
+		xf := z.Sub(challenge, responses[3*j])
+		xf = z.Mod(xf, grouporder)
+		// ( challenge - responses[3*j] ) * commitments[4*j]
+		xfc := (commitments[4*j]).ScalarMult(xf)
+		// above + commitments[4*j+2]
+		lhs = xfc.Add(commitments[4*j+2])
+		fmt.Println("LHS : ", lhs)
+		// why doesn't this work :(
 		rhs = Commit(big.NewInt(0), responses[3*j+2])
 		fmt.Println("responses[3j + 2] : ", responses[3*j+2])
 		fmt.Println("RHS : ", rhs)
-		/*
-			if rhs.X.Cmp(lhs.X) != 0 || rhs.Y.Cmp(lhs.Y) != 0 {
-				return false
-			}
+		if rhs.X.Cmp(lhs.X) != 0 || rhs.Y.Cmp(lhs.Y) != 0 {
+			return false
+		}
 
-		*/
-
-		// product from i = 0 to i = N - 1 of ci to the power of product of (product from j = 0 to j = n - 1 f j i j)
-		// multiplied by product from k = 0 to k = n - 1 of cdk to the power of minus x**k ======== commit(0, zd)
+		// product from i = 0 to i = N - 1 of ci to the power of product of
+		// (product from j = 0 to j = n - 1 of f_{j, i_j})
+		// multiplied by product from k = 0 to k = n - 1 of cdk to the power of minus x**k
+		// == commit(0, zd)
 
 	}
 	return true

@@ -20,7 +20,6 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 	array := sha3.Sum256([]byte("lots of cool stuff including the commitments"))
 	challenge := Convert(array[:])
 	ringbin := strconv.FormatInt(int64(ringlength), 2)
-	// TODO: check if the bitlength = n is correct!!
 	n := int(len(ringbin) + 1)
 
 	for j := 0; j < n; j++ {
@@ -46,12 +45,9 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 		xfc := (commitments[4*j]).ScalarMult(xf)
 		// above + commitments[4*j+2]
 		lhs = xfc.Add(commitments[4*j+2])
-		fmt.Println("LHS : ", lhs)
-		// why doesn't this work :(
-
 		rhs = Commit(big.NewInt(0), responses[3*j+2])
-		fmt.Println("RHS : ", rhs)
 		if rhs.X.Cmp(lhs.X) != 0 || rhs.Y.Cmp(lhs.Y) != 0 {
+			fmt.Println("((x - fj) * clj) + cbj == commit(0, zbj) check fails")
 			return false
 		}
 

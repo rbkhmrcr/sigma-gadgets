@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"golang.org/x/crypto/sha3"
-	//	"math"
 	"math/big"
 	"strconv"
 )
@@ -60,7 +59,10 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 
 		// cbj = (lj * aj) * g + tj * h
 		z := new(big.Int)
-		commitments = append(commitments, Commit(z.Add(bigintbit, randomvars[5*j+1]), randomvars[5*j+3]))
+		ljaj := z.Mul(bigintbit, randomvars[5*j+1])
+		ljaj = z.Mod(ljaj, grouporder)
+		fmt.Println("ljaj", ljaj)
+		commitments = append(commitments, Commit(ljaj, randomvars[5*j+3]))
 
 		// cdk = (for i = 0, ..., N-1) p[i][k] * ci    +      0 * g + rhok * h
 		// product temp is p[i][k] * c[i]
@@ -128,15 +130,15 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 
 		// zbj = rj * (x - fj) + tj
 		z = new(big.Int)
+		// x - fj
 		zbj := z.Sub(challenge, fj)
 		zbj = z.Mod(zbj, grouporder)
+		// rj * (x - fj)
 		zbj = z.Mul(randomvars[5*j], zbj)
 		zbj = z.Mod(zbj, grouporder)
+		// rj * (x - fj) + tj
 		zbj = z.Add(zbj, randomvars[5*j+3])
 		zbj = z.Mod(zbj, grouporder)
-		gzbj := H.ScalarMult(zbj)
-		fmt.Println("zbj : ", zbj)
-		fmt.Println("this should equal rhs ???? : ", gzbj)
 		// so zbj = responses[3*j + 2]
 		responses = append(responses, zbj)
 

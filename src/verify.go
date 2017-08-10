@@ -12,6 +12,7 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 	for i := 0; i < len(commitments); i++ {
 		check := Group.IsOnCurve(commitments[i].X, commitments[i].Y)
 		if check == false {
+			fmt.Println("curve check fails")
 			return false
 		}
 	}
@@ -30,6 +31,7 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 		lhs := xc.Add(commitments[4*j+1])
 		rhs := Commit(responses[3*j], responses[3*j+1])
 		if rhs.X.Cmp(lhs.X) != 0 || rhs.Y.Cmp(lhs.Y) != 0 {
+			fmt.Println("(x * clj) + caj == commit(fj, zaj) check fails")
 			return false
 		}
 
@@ -46,8 +48,8 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 		lhs = xfc.Add(commitments[4*j+2])
 		fmt.Println("LHS : ", lhs)
 		// why doesn't this work :(
+
 		rhs = Commit(big.NewInt(0), responses[3*j+2])
-		fmt.Println("responses[3j + 2] : ", responses[3*j+2])
 		fmt.Println("RHS : ", rhs)
 		if rhs.X.Cmp(lhs.X) != 0 || rhs.Y.Cmp(lhs.Y) != 0 {
 			return false

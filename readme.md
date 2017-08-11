@@ -1,4 +1,4 @@
-# GKringsig
+# gk
 
 groth-kohlweiss ring signatures in solidity with backend in go!  The paper can be
 found [here](https://eprint.iacr.org/2014/764). Signatures are logarithmic in

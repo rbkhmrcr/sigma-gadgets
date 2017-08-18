@@ -10,7 +10,7 @@ import (
 
 // Prover is the gk prover routine. it's needed in ring signatures and stuff.
 // if Ring has a length (?) then we don't need to submit the length separately :)
-func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]CurvePoint, []*big.Int, *big.Int) {
+func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]CurvePoint, []*big.Int) {
 
 	/* -----------------------------------------
 	this is the first part of the sigma protocol
@@ -95,10 +95,8 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 
 	/* ------------------------------------
 	this is where we generate the challenge
-	------------------------------------ */
+	-------------------------------------*/
 
-	// should we just carry on the loop above? who cares
-	// we need to convert the challenge into a big int :(
 	array := sha3.Sum256([]byte("lots of cool stuff including the commitments"))
 	challenge := Convert(array[:])
 
@@ -170,6 +168,7 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 
 	zd := z.Sub(rxn, ztemp)
 	zd = z.Mod(zd, grouporder)
+	responses = append(responses, zd)
 
-	return commitments, responses, zd
+	return commitments, responses
 }

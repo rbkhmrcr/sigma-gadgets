@@ -77,6 +77,11 @@ type Ring struct {
 }
 
 func main() {
+
+	// we should have a case where the public and private keys are
+	// generated at random on the fly and stored in arrays rather than
+	// read in from a json file. I think this'll be esssential for testing?
+
 	// read in all the private keys
 	privkeyfile, err := ioutil.ReadFile("privkeys.json")
 	sk := PrivKeysStr{} // because all json files are read in as strings
@@ -95,9 +100,9 @@ func main() {
 	// ive just picked the 3rd (2nd counting from 0th) privkey here :)
 	// why not just read it from the file ?????
 	privkey.SetString("23246495091784532220524749001303194962250020895499760086019834032589186452479", 10)
-	proofa, proofb, proofc := Prover(pubkeys, 3, 2, privkey)
 
-	pv := Verify(pubkeys, 3, proofa, proofb, proofc)
+	proofa, proofb := Prover(pubkeys, 3, 2, privkey)
+	pv := Verify(pubkeys, 3, proofa, proofb)
 	fmt.Println("verificaaaationnnnnnn : ", pv)
 }
 

@@ -8,7 +8,7 @@ import (
 )
 
 // Verify is the gk **proof** verification. (contrast with SpendVerify)
-func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*big.Int, zd *big.Int) bool {
+func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*big.Int) bool {
 
 	// first check that all the commitments are legit curvepoints
 	for i := 0; i < len(commitments); i++ {
@@ -100,7 +100,7 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 	lhs := cifproduct.Add(xkcdprod)
 	fmt.Println(lhs)
 
-	rhs := Commit(big.NewInt(0), zd)
+	rhs := Commit(big.NewInt(0), responses[len(responses)-1])
 	fmt.Println(rhs)
 
 	return true

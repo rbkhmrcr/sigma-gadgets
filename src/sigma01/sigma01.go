@@ -2,10 +2,16 @@ package main
 
 import (
 	"crypto/rand"
-	secp "github.com/btcsuite/btcd/btcec"
+	"errors"
+	"github.com/btcsuite/btcd/btcec"
+	"golang.org/x/crypto/sha3"
 	"math/big"
 )
 
+// lemme start with a caveat/explanation that most of this will disappear when
+// stuff from a diff folder gets made into a package :)
+
+// CurvePoint = (x, y)
 type CurvePoint struct {
 	X *big.Int
 	Y *big.Int
@@ -29,15 +35,21 @@ func (c CurvePoint) Add(y CurvePoint) CurvePoint {
 	return CurvePoint{px, py}
 }
 
-var Group = secp.S256()
+// Group = secp256k1
+var Group = btcec.S256()
 var grouporder = Group.N
-var H = hashtocurve([]byte("I am a stupid moron"))
-var ck []CurvePoint
+
+// H is the second generator
+var H, _ = hashtocurve([]byte("I am a stupid moron"))
 
 func main() {
+	var ck []CurvePoint
+	ck = append(ck, CurvePoint{Group.Gx, Group.Gy})
+	ck = append(ck, H)
 }
 
-func Prover(c CurvePoint, m *big.Int, r *big.Int) (CurvePoint, CurvePoint, []*big.Int) {
+// Prover creates a (SHVZK) proof that a commitment opens to 0 or 1
+func Prover(ck []CurvePoint, c CurvePoint, m *big.Int, r *big.Int) (CurvePoint, CurvePoint, *big.Int, *big.Int, *big.Int) {
 
 	// generate a, s, t
 	a, e := rand.Int(rand.Reader, grouporder)
@@ -47,19 +59,80 @@ func Prover(c CurvePoint, m *big.Int, r *big.Int) (CurvePoint, CurvePoint, []*bi
 	t, e := rand.Int(rand.Reader, grouporder)
 	check(e)
 
-	return nil, nil, nil
+	// commitments to a with s and am with t :)
+	ca := commit(a, s)
+	am := new(big.Int).Mul(a, m)
+	cb := commit(am, t)
+
+	xdigest := sha3.Sum256([]byte("something to do with the above commitments should go here"))
+	x := convert(xdigest[:])
+
+	f := new(big.Int).Mul(m, x)
+	f.Mod(f, grouporder)
+	f.Add(f, a)
+	f.Mod(f, grouporder)
+
+	za := new(big.Int).Mul(r, x)
+	za.Mod(za, grouporder)
+	za.Add(za, s)
+	za.Mod(za, grouporder)
+
+	zb := new(big.Int).Sub(x, f)
+	zb.Mul(zb, r) // can we use zb.Mul(zb) like this ? :/
+	zb.Mod(zb, grouporder)
+	zb.Add(zb, t)
+	zb.Mod(zb, grouporder)
+
+	return ca, cb, f, za, zb
 
 }
 
-func Verifier(c CurvePoint, ca CurvePoint, cb CurvePoint, responses []*big.Int) bool {
+// Verifier checks the above created proof that a commitment opens to 0 or 1
+func Verifier(ck []CurvePoint, c CurvePoint, ca CurvePoint, cb CurvePoint, f *big.Int, za *big.Int, zb *big.Int) bool {
 	return false
 }
 
 // Commit returns a Pedersen commitment of the form g1**m, g2**r
-func Commit(m *big.Int, r *big.Int) CurvePoint {
+func commit(m *big.Int, r *big.Int) CurvePoint {
 	gm := CurvePoint{}.ScalarBaseMult(m)
 	hr := H.ScalarMult(r)
 	return hr.Add(gm)
+}
+
+// HashToCurve takes a byteslice and returns a CurvePoint (whose DL remains unknown!)
+func hashtocurve(s []byte) (CurvePoint, error) {
+	q := Group.P
+	x := big.NewInt(0)
+	y := big.NewInt(0)
+	z := big.NewInt(0)
+	// what is this magical number
+	z.SetString("57896044618658097711785492504343953926634992332820282019728792003954417335832", 10)
+
+	// sum256 outputs an array of 32 bytes :) => are we menna use   keccak? does this work?
+	array := sha3.Sum256(s)
+	x = convert(array[:])
+	for true {
+		xcubed := new(big.Int).Exp(x, big.NewInt(3), q)
+		xcubed7 := new(big.Int).Add(xcubed, big.NewInt(7))
+		y.ModSqrt(xcubed7, q)
+		y.Set(q)
+		y.Add(y, big.NewInt(1))
+		y.Rsh(y, 2)
+		y.Exp(xcubed7, y, q)
+		z = z.Exp(y, big.NewInt(2), q)
+		posspoint := Group.IsOnCurve(x, y)
+		if posspoint == true {
+			return CurvePoint{x, y}, nil
+		}
+		x.Add(x, big.NewInt(1))
+	}
+	return CurvePoint{}, errors.New("no curve point found")
+}
+
+func convert(data []byte) *big.Int {
+	z := new(big.Int)
+	z.SetBytes(data)
+	return z
 }
 
 func check(e error) {

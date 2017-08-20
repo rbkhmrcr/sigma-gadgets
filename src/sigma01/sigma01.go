@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"github.com/btcsuite/btcd/btcec"
 	"golang.org/x/crypto/sha3"
 	"math/big"
@@ -89,7 +90,29 @@ func Prover(ck []CurvePoint, c CurvePoint, m *big.Int, r *big.Int) (CurvePoint, 
 
 // Verifier checks the above created proof that a commitment opens to 0 or 1
 func Verifier(ck []CurvePoint, c CurvePoint, ca CurvePoint, cb CurvePoint, f *big.Int, za *big.Int, zb *big.Int) bool {
-	return false
+
+	xdigest := sha3.Sum256([]byte("something to do with the above commitments should go here"))
+	x := convert(xdigest[:])
+
+	cx := c.ScalarMult(x)
+	lhs := cx.Add(ca)
+	rhs := commit(f, za)
+	if rhs.X.Cmp(lhs.X) != 0 || rhs.Y.Cmp(lhs.Y) != 0 {
+		fmt.Println("(x * c) + ca == commit(f, za) check fails")
+		return false
+	}
+
+	xf := new(big.Int).Sub(x, f)
+	xf.Mod(xf, grouporder)
+	cxf := c.ScalarMult(xf)
+	lhs = cxf.Add(cb)
+	rhs = commit(big.NewInt(0), zb)
+	if rhs.X.Cmp(lhs.X) != 0 || rhs.Y.Cmp(lhs.Y) != 0 {
+		fmt.Println("((x - f)* c) + cb == commit(0, zb) check fails")
+		return false
+	}
+
+	return true
 }
 
 // Commit returns a Pedersen commitment of the form g1**m, g2**r
@@ -108,7 +131,6 @@ func hashtocurve(s []byte) (CurvePoint, error) {
 	// what is this magical number
 	z.SetString("57896044618658097711785492504343953926634992332820282019728792003954417335832", 10)
 
-	// sum256 outputs an array of 32 bytes :) => are we menna use   keccak? does this work?
 	array := sha3.Sum256(s)
 	x = convert(array[:])
 	for true {

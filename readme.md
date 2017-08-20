@@ -1,33 +1,25 @@
 # gk
 
-groth-kohlweiss ring signatures in solidity with backend in go!  The paper can be
-found [here](https://eprint.iacr.org/2014/764). Signatures are logarithmic in
-number of participants, and can be altered from the paper construction to
-require only the random oracle model (rather than existing in the common
-reference or random string models).
+groth-kohlweiss commitment to 0 or 1 sigma protocol and ring signatures and
+'zerocoin scheme', written in go (i wanted to use rust but got shouted at
+for being too hipster). The paper/algos can be found
+[here](https://eprint.iacr.org/2014/764). Signatures are logarithmic in
+number of participants, and require only the random oracle model, which is
+fun for trustless settings that already exist in ROM (eg blockchains).
 
-For a more detailed guide to what the contract and client-side code is doing
-while this dapp is in use, refer to the section 'the algo' below.
 In brief, we have the setup stage (run only by the contract at its deployment
 time), the deposit stage, and the withdrawal stage. The senders interact with
 the contract in the deposit stage, and the recipients interact with the contract
-in the withdrawal stage. What exactly is required in each of these stages is
-explained below.
+in the withdrawal stage.
 
 
 ## the algo
 
 the groth-kohlweiss paper introduces two schemes using their one of many proofs
 -- one is a ring signature scheme (not linkable, perfect anonymity), and the other
-is a 'zerocoin' scheme, where coins are commitments to serial numbers. I _think_
-we can use this serial number as a type of linking tag, but we may have to adapt it.
-Besides the serial number, the schemes are quite similar. They are also not _too_
-different from the original unique ring signature algorithm that we implemented.
+is a 'zerocoin' scheme, where coins are commitments to serial numbers.
 
 ### prep
-
-This description is entirely just a rewording of things in the groth-kohlweiss
-paper :)
 
 For n participants in the ring, the sigma protocol has the prover send 4 log n
 commitments (which take the form of elliptic curve points) and 3 log n + 1
@@ -57,20 +49,16 @@ money, into the mixing contract as expected.
 
 ### withdrawal stage
 
-The recipients run the groth-kohlweiss protocol to generate a 'one of many' proof, which
-acts as a ring signature. In the paper, this can be enhanced with a serial number, but
-this actually isn't really what we want. What we want is a linkable ring signature, which
-is different. Otherwise the state just keeps growing and growing ? People who withdraw
-from the contract later have to pay more, but their anonymity set is larger, which makes
-sense, i guess.
-
+Recipients reveal their serial number and a proof that they know the witness of one of the
+commitments to zero that occurred in the deposit stage. Commitments to zero are kinda equivalent
+to public keys, using the commitment's randomness as private key :)
 
 
 ## user tools
 
 User tools coming soon (TM).
 
-## the api
+## smart contracting it up
 
 the contract has 3 functions:
 - the constructor

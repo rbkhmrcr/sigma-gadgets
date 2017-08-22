@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
-	// "fmt"
 	"golang.org/x/crypto/sha3"
 	"math/big"
 	"strconv"
@@ -17,31 +15,27 @@ func Prover(ring Ring, ringlength int, signerindex int, privatekey *big.Int) ([]
 	----------------------------------------- */
 
 	ringbin := strconv.FormatInt(int64(ringlength), 2)
-	// TODO: check if the bitlength = n is correct!!
+	// TODO: check if bitlength == n is correct!!
 	n := uint(len(ringbin) + 1)
 	randomvars := make([]*big.Int, 0)
 	commitments := make([]CurvePoint, 0)
+
 	// j is the bitwise index, always :) in the paper it's 1, ..., n, but we'll count from 0.
 	for j := uint(0); j < n; j++ {
 		// we could use a for loop here with i from 0 to 4 ?
-		rj, e := rand.Int(rand.Reader, grouporder)
-		Check(e)
+		rj := Random()
 		randomvars = append(randomvars, rj)
 		// so r[j] will be randomvars[5*j]
-		aj, e := rand.Int(rand.Reader, grouporder)
-		Check(e)
+		aj := Random()
 		randomvars = append(randomvars, aj)
 		// so a[j] will be randomvars[5*j + 1]
-		sj, e := rand.Int(rand.Reader, grouporder)
-		Check(e)
+		sj := Random()
 		randomvars = append(randomvars, sj)
 		// so s[j] will be randomvars[5*j + 2]
-		tj, e := rand.Int(rand.Reader, grouporder)
-		Check(e)
+		tj := Random()
 		randomvars = append(randomvars, tj)
 		// so t[j] will be randomvars[5*j + 3]
-		rhok, e := rand.Int(rand.Reader, grouporder)
-		Check(e)
+		rhok := Random()
 		randomvars = append(randomvars, rhok)
 		// so rho[k] will be randomvars[5*j + 4]
 		// should these actually not just use the variables aj, sj, etc, as they are still

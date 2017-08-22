@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -11,17 +12,7 @@ import (
 	"math/big"
 )
 
-// Group is secp256k1 as defined in btcec
-var Group = secp.S256()
-var grouporder = Group.N
-
-// H is an EC point with unknown DL
-var H, _ = HashToCurve([]byte("i am a stupid moron"))
-
-// we need a curve point type so that curve points are just one thing
-// as opposed to being representing by their bigint affine coordinates x, y :)
-
-// CurvePoint lets us use the bigint affine point rep as one var not two :)
+// CurvePoint lets us use the bigint coordinate representation of a curve point as a type :)
 type CurvePoint struct {
 	X *big.Int `json:"x"`
 	Y *big.Int `json:"y"`
@@ -75,6 +66,13 @@ type PubKey struct {
 type Ring struct {
 	PubKeys []PubKey `json:"pubkeys"`
 }
+
+// Group is secp256k1 as defined in btcec
+var Group = secp.S256()
+var grouporder = Group.N
+
+// H is an EC point with unknown DL
+var H, _ = HashToCurve([]byte("i am a stupid moron"))
 
 func main() {
 
@@ -161,7 +159,7 @@ func HashToCurve(s []byte) (CurvePoint, error) {
 	// what is this magical number
 	z.SetString("57896044618658097711785492504343953926634992332820282019728792003954417335832", 10)
 
-	// sum256 outputs an array of 32 bytes :) => are we menna use   keccak? does this work?
+	// sum256 outputs an array of 32 bytes :) => are we menna use keccak? does this work?
 	array := sha3.Sum256(s)
 	x = Convert(array[:])
 	for true {
@@ -199,6 +197,13 @@ func ConvertPubKeys(rn RingStr) Ring {
 		ring.PubKeys = append(ring.PubKeys, PubKey{CurvePoint{pubkeyx, pubkeyy}})
 	}
 	return ring
+}
+
+// Random gives a random bigint modulo the group order :)
+func Random() *big.Int {
+	r, e := rand.Int(rand.Reader, grouporder)
+	Check(e)
+	return r
 }
 
 // Convert goes byte slice -> *big.Int

@@ -47,18 +47,19 @@ func main() {
 	var ck []CurvePoint
 	ck = append(ck, CurvePoint{Group.Gx, Group.Gy})
 	ck = append(ck, H)
+
+	r := random()
+	c := CurvePoint{}.ScalarBaseMult(r)
+
 }
 
 // Prover creates a (SHVZK) proof that a commitment opens to 0 or 1
 func Prover(ck []CurvePoint, c CurvePoint, m *big.Int, r *big.Int) (CurvePoint, CurvePoint, *big.Int, *big.Int, *big.Int) {
 
 	// generate a, s, t
-	a, e := rand.Int(rand.Reader, grouporder)
-	check(e)
-	s, e := rand.Int(rand.Reader, grouporder)
-	check(e)
-	t, e := rand.Int(rand.Reader, grouporder)
-	check(e)
+	a := random()
+	s := random()
+	t := random()
 
 	// commitments to a with s and am with t :)
 	ca := commit(a, s)
@@ -149,6 +150,12 @@ func hashtocurve(s []byte) (CurvePoint, error) {
 		x.Add(x, big.NewInt(1))
 	}
 	return CurvePoint{}, errors.New("no curve point found")
+}
+
+func random() *big.Int {
+	r, e := rand.Int(rand.Reader, grouporder)
+	check(e)
+	return r
 }
 
 func convert(data []byte) *big.Int {

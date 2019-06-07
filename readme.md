@@ -1,11 +1,11 @@
 # gk
 
-groth-kohlweiss commitment to 0 or 1 sigma protocol and ring signatures and
-'zerocoin scheme', written in go (i wanted to use rust but got shouted at
-for being too hipster). The paper/algos can be found
+Here lives the Groth-Kohlweiss sigma protocol for commitments to 0 or 1, 
+and ring signatures and
+'zerocoin scheme', written in Go. The paper and algorithms can be found
 [here](https://eprint.iacr.org/2014/764). Signatures are logarithmic in
 number of participants, and require only the random oracle model, which is
-fun for trustless settings that already exist in ROM (eg blockchains).
+great for adding to protocols that already exist in ROM (eg blockchains).
 
 In brief, we have the setup stage (run only by the contract at its deployment
 time), the deposit stage, and the withdrawal stage. The senders interact with
@@ -15,7 +15,7 @@ in the withdrawal stage.
 
 ## the algo
 
-the groth-kohlweiss paper introduces two schemes using their one of many proofs
+The Groth-Kohlweiss paper introduces two schemes using their one of many proofs
 -- one is a ring signature scheme (not linkable, perfect anonymity), and the other
 is a 'zerocoin' scheme, where coins are commitments to serial numbers.
 
@@ -56,9 +56,9 @@ to public keys, using the commitment's randomness as private key :)
 
 ## user tools
 
-User tools coming soon (TM).
+User tools coming soon (TM). (Don't use this)
 
-## smart contracting it up
+## smart contract functionality
 
 the contract has 3 functions:
 - the constructor

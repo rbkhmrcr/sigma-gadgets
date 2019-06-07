@@ -10,7 +10,7 @@ import (
 // Verify is the gk **proof** verification. (contrast with SpendVerify)
 func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*big.Int) bool {
 
-	// first check that all the commitments are legit curvepoints
+	// first check that all the commitments are valid curvepoints
 	for i := 0; i < len(commitments); i++ {
 		check := Group.IsOnCurve(commitments[i].X, commitments[i].Y)
 		if check == false {
@@ -60,7 +60,6 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 	// == commit(0, zd)
 
 	var cifproduct CurvePoint
-	// i'm calling i index because otherwise this is rly hard to follow
 	for index := uint(0); index < uint(ringlength); index++ {
 		fproduct := big.NewInt(1)
 		for j := uint(0); j < n; j++ {
@@ -98,10 +97,8 @@ func Verify(ring Ring, ringlength int, commitments []CurvePoint, responses []*bi
 	}
 
 	lhs := cifproduct.Add(xkcdprod)
-	fmt.Println(lhs)
 
 	rhs := Commit(big.NewInt(0), responses[len(responses)-1])
-	fmt.Println(rhs)
 
-	return true
+	return lhs == rhs 
 }

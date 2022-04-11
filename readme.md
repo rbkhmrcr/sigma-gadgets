@@ -1,17 +1,11 @@
 # gk
 
-Here lives the Groth-Kohlweiss sigma protocol for commitments to 0 or 1, 
+Here lives the Groth-Kohlweiss sigma protocol for commitments to 0 or 1,
 and ring signatures and
 'zerocoin scheme', written in Go. The paper and algorithms can be found
 [here](https://eprint.iacr.org/2014/764). Signatures are logarithmic in
 number of participants, and require only the random oracle model, which is
 great for adding to protocols that already exist in ROM (eg blockchains).
-
-In brief, we have the setup stage (run only by the contract at its deployment
-time), the deposit stage, and the withdrawal stage. The senders interact with
-the contract in the deposit stage, and the recipients interact with the contract
-in the withdrawal stage.
-
 
 ## the algo
 
@@ -26,7 +20,7 @@ commitments (which take the form of elliptic curve points) and 3 log n + 1
 elements in Zq.  With pedersen commitments, the prover computes 2n log n
 exponentiations, and verification takes 2n exponentiations.
 multi-exponentiation and batching can be used to reduce the computational
-cost, but i'm not smart enough to do this yet.
+cost.
 
 Pedersen commitments themselves are very simple: using a prime order group G,
 and two group elements g & h, given a value m in Zq, and perhaps some
@@ -50,19 +44,5 @@ money, into the mixing contract as expected.
 ### withdrawal stage
 
 Recipients reveal their serial number and a proof that they know the witness of one of the
-commitments to zero that occurred in the deposit stage. Commitments to zero are kinda equivalent
-to public keys, using the commitment's randomness as private key :)
-
-
-## user tools
-
-User tools coming soon (TM). (Don't use this)
-
-## smart contract functionality
-
-the contract has 3 functions:
-- the constructor
-- the deposit phase (commitments to 'public keys' of the recipients)
-- the withdrawal phase. Here the recipients prove they have one of the committed
-  values (the private keys -- this is a ring signature), and the contract
-  verifies the signature and releases the funds if correct.
+commitments to zero that occurred in the deposit stage. Commitments to zero can be thought
+of as equivalent to public keys, using the commitment's randomness as private key :)

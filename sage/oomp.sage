@@ -1,7 +1,7 @@
 #!/usr/bin/env sage
 from Crypto.Hash import SHA256
 
-def get_poly(n, i, l):
+def get_poly(n, i, l, a):
 # for each i \in {0, ..., N-1}, k \in {0, ..., n-1}, p_{i,k} is a number, the kth coefficient
 # of the polynomial p_i. the polynomial itself is constructed by the product from j = 1 to n
 # of f_{j,i_j}, where f_{j,1} = l_j * x + a_j, and f_{j,0} = (1 - l_j) * x - a_j
@@ -13,7 +13,14 @@ def get_poly(n, i, l):
       f *= l_bits[j] * x + a[j]
     else:
       f *= (1 - l_bits[j]) * x - a[j]
-    return f
+    return f.list()
+
+# p_{i, k} is the kth coefficient (of which there are n) of the ith polynomial (of which there are N)
+def get_poly_product(c, k, poly_dict):
+  sum = 1
+  for i in range(N):
+    sum += poly_dict[i][k] * c[i] # with elliptic curves, we have multiplication not exponentiation
+  return sum
 
 def hash(a, b, c, d, e, f, g, h):
   m = SHA256.new(a, b, c, d, e, f, g, h)
@@ -21,7 +28,7 @@ def hash(a, b, c, d, e, f, g, h):
 
 # instantiated with pedersen commitments
 def commit(m, r):
-  m*G + r*H
+  m * gen_g + r * gen_h
 
 def prover(ck, c, provers_index, provers_rand):
   N = len(c)        # gets number of elements in commitment list
@@ -34,43 +41,49 @@ def prover(ck, c, provers_index, provers_rand):
   rho = [0] * n
 
   l_bits = provers_index.digits(2)
-  comm_lbits = [0] * n
-  comm_a = [0] * n
-  comm_lbitsa = [0] * n
-  
+  com_lbits = [0] * n
+  com_a = [0] * n
+  com_b = [0] * n
+  com_d = [0] * n
+
   for j in range(n):
     r[j] = Fr.random_element()
     a[j] = Fr.random_element()
     s[j] = Fr.random_element()
     t[j] = Fr.random_element()
     rho[j] = Fr.random_element()
-
     # commit separately to each bit in provers_index, using the rj as randomness
-    # commit also to each aj, using sj as randomness
     # commit also to ljaj, using tj as randomness
-    # (together these commitments will be used to prove that each bit of provers_index
-    # is indeed a 0 or 1)
-    comm_lbits[j] = commit(l_bits[j], r[j])
-    comm_a[j] = commit(a[j], s[j])
-    comm_lbitsa[j] = commit(a[j] * l_bits[j], t[j])
+    com_lbits[j] = commit(l_bits[j], r[j])
+    com_a[j] = commit(a[j], s[j])
+    com_b[j] = commit(a[j] * l_bits[j], t[j])
 
-  for i in range(N):
-    c[i] = get_poly(n, i, provers_index)
+  poly_dict = dict( [ (i, getpoly(n, i, provers_index, a)) for i in range(N) ] ) 
 
+  for j in range(n):
+    ci_pik = get_poly_product(j, c, poly_dict)
+    com_d[j] = ci_pik + commit(0, rho[j])
+
+  challenge = hash(c, com_lbits, com_a, com_b, com_d)
   
-  cb = commit (a*m, t)
-  x = hash(ck, c, a, s, t, ca, cb)
-  f = m*challenge + a
-  za = r*challenge + s
-  f = [1] * N
-  
+  f = [0] * n
+  za = [0] * n
+  zb = [0] * n
+  for j in range(n):
+    f[j] = l_bits[j] * challenge + a[j]
+    za[j] = r[j] * challenge + s[j]
+    zb[j] = r[j] * (challenge - f[j]) + t[j]
+  sum = [ ( rho[k] * challenge ** k ) for k in range(n) ]
+  zd = provers_randomness * challenge ** n - sum
 
-  zb = 
-  (ca, cb, f, za, zb)
+  return com_lbits, com_a, com_b, com_d, f, za, zb, zd
 
-def verifier(ck, c, ca, cb, f, za, zb):
-  assert x*c + ca == commit(f, zb)
-  assert (x-f)*c + cb == commit(0, zb)
+def verifier(ck, c, com_lbits, com_a, com_b, com_d, f, za, zb, zd):
+  N = len(c)
+  n = N.nbits()
+  challenge = hash(c, com_lbits, com_a, com_b, com_d)
+  assert [ ( com_lbits[j] ** challenge * com_a[j] == commit(f[j], za[j] ) for j in range(n) ]
+  assert [ ( com_lbits[j] ** (challenge = f[j]) * cb[j] == commit(0, zb[j]) ) for j in range(n) ]
 
 def tests():
 # Ethereum elliptic curve
@@ -88,16 +101,9 @@ def tests():
   Fr = GF(r)
   R.<x> = Fr['x']
 
-  # for each i \in {0, ..., N-1}, k \in {0, ..., n-1}, p_{i,k} is a number, the kth coefficient
-  # of the polynomial p_i. the polynomial itself is constructed by the product from j = 1 to n
-  # of f_{j,i_j}, where f_{j,1} = l_j * x + a_j, and f_{j,0} = (1 - l_j) * x - a_j
-
   N = 8
   n = 3
   l = 6
   i = 2
   l_bits = [1, 1, 0]
   i_bits = [0, 1, 0]
-
-  a = [Fr.random_element(), Fr.random_element(), Fr.random_element()]
-  f = [1, 1, 1, 1, 1, 1, 1, 1]

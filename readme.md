@@ -1,8 +1,7 @@
 # gk
 
 Here lives the Groth-Kohlweiss sigma protocol for commitments to 0 or 1,
-and ring signatures and
-'zerocoin scheme', written in Go. The paper and algorithms can be found
+and ring signatures and zerocoin scheme. The paper and algorithms can be found
 [here](https://eprint.iacr.org/2014/764). Signatures are logarithmic in
 number of participants, and require only the random oracle model, which is
 great for adding to protocols that already exist in ROM (eg blockchains).
@@ -11,7 +10,7 @@ great for adding to protocols that already exist in ROM (eg blockchains).
 
 The Groth-Kohlweiss paper introduces two schemes using their one of many proofs
 -- one is a ring signature scheme (not linkable, perfect anonymity), and the other
-is a 'zerocoin' scheme, where coins are commitments to serial numbers.
+is a zerocoin scheme, where coins are commitments to serial numbers.
 
 ### prep
 

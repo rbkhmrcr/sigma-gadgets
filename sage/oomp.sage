@@ -22,7 +22,7 @@ def get_poly(n, i, l, a):
 # p_{i, k} is the kth coefficient (of which there are n) of the ith polynomial (of which there are N)
 def get_poly_product(c, k, poly_dict):
   sum = 1
-  for i in range(N):
+  for i in range(N-1):
     sum += poly_dict[i][k] * c[i] # with elliptic curves, we have multiplication not exponentiation
   return sum
 
@@ -62,7 +62,7 @@ def prover(ck, c, provers_index, provers_rand):
     com_a[j] = commit(ck, a[j], s[j])
     com_b[j] = commit(ck, a[j] * l_bits[j], t[j])
 
-  poly_dict = dict( [ (i, get_poly(n, i, provers_index, a)) for i in range(N) ] )
+  poly_dict = dict( [ (i, get_poly(n, i, provers_index, a)) for i in range(N-1) ] )
 
   for j in range(n):
     ci_pik = get_poly_product(j, c, poly_dict)
@@ -73,11 +73,11 @@ def prover(ck, c, provers_index, provers_rand):
   f = [0] * n
   za = [0] * n
   zb = [0] * n
-  for j in range(n):
+  for j in range(n-1):
     f[j] = l_bits[j] * challenge + a[j]
     za[j] = r[j] * challenge + s[j]
     zb[j] = r[j] * (challenge - f[j]) + t[j]
-  sum = [ ( rho[k] * challenge ** k ) for k in range(n) ]
+  sum = [ ( rho[k] * challenge ** k ) for k in range(n-1) ]
   zd = provers_rand * challenge ** n - sum
 
   return com_lbits, com_a, com_b, com_d, f, za, zb, zd
@@ -86,8 +86,8 @@ def verifier(ck, c, com_lbits, com_a, com_b, com_d, f, za, zb, zd):
   N = len(c)
   n = N.nbits()
   challenge = hash(c, com_lbits, com_a, com_b, com_d)
-  assert [ ( com_lbits[j] ** challenge * com_a[j] == commit(ck, f[j], za[j]) ) for j in range(n) ]
-  assert [ ( com_lbits[j] ** (challenge - f[j]) * cb[j] == commit(ck, 0, zb[j]) ) for j in range(n) ]
+  assert [ ( com_lbits[j] ** challenge * com_a[j] == commit(ck, f[j], za[j]) ) for j in range(n-1) ]
+  assert [ ( com_lbits[j] ** (challenge - f[j]) * cb[j] == commit(ck, 0, zb[j]) ) for j in range(n-1) ]
 
 def tests():
 # Ethereum elliptic curve
@@ -116,7 +116,7 @@ def tests():
   sk = Fr.random_element()
   provers_rand = Fr.random_element()
   provers_com = commit(ck, sk, provers_rand)
-  c = [E.random_element() for i in range(N)]
+  c = [E.random_element() for i in range(N-1)]
   c[l] = provers_com
   t1 = cputime()
   (com_lbits, com_a, com_b, com_d, f, za, zb, zd)  = prover(ck, c, l, r)

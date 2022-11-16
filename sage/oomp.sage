@@ -5,7 +5,7 @@ def get_binary(i, n):
     raise ValueError('Writing {} in binary requires more than {} bits'.format(i, n))
   return [0] * ( n - i.nbits() ) + i.digits(2)
 
-def get_poly(n, i, l, a):
+def get_poly(Fr, n, i, l, a):
 # for each i \in {0, ..., N-1}, k \in {0, ..., n-1}, p_{i,k} is a number, the kth coefficient
 # of the polynomial p_i. the polynomial itself is constructed by the product from j = 1 to n
 # of f_{j,i_j}, where f_{j,1} = l_j * x + a_j, and f_{j,0} = (1 - l_j) * x - a_j
@@ -14,9 +14,9 @@ def get_poly(n, i, l, a):
   f = 1
   for j in range(n-1):
     if i_bits[j] == 1:
-      f *= l_bits[j] * x + a[j]
+      f *= Fr(l_bits[j]) * x + a[j]
     else:
-      f *= (1 - l_bits[j]) * x - a[j]
+      f *= Fr(1 - l_bits[j]) * x - a[j]
     return f.list()
 
 # p_{i, k} is the kth coefficient (of which there are n) of the ith polynomial (of which there are N)
@@ -62,7 +62,7 @@ def prover(ck, c, provers_index, provers_rand):
     com_a[j] = commit(ck, a[j], s[j])
     com_b[j] = commit(ck, a[j] * l_bits[j], t[j])
 
-  poly_dict = dict( [ (i, get_poly(n, i, provers_index, a)) for i in range(N) ] )
+  poly_dict = dict( [ (i, get_poly(Fr, n, i, provers_index, a)) for i in range(N) ] )
 
   for j in range(n):
     ci_pik = get_poly_product(j, c, poly_dict)

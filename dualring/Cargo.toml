@@ -7,7 +7,7 @@ Implementation of the DualRing Schnorr-based ring signature construction.
 """
 
 [dependencies]
-elliptic_curve = "^0.12"
+elliptic-curve = "^0.12"
 sha2 = "^0.10"
 
 [[bench]]

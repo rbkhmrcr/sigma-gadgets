@@ -1,23 +1,17 @@
-use elliptic_curves;
-fn main() {
-    println!("Hello, world!");
+#![allow(non_snake_case)]
+use elliptic_curve::{Scalar, AffinePoint, PrimeCurve, ScalarArithmetic, AffineArithmetic};
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SumArg<C: PrimeCurve + ScalarArithmetic + AffineArithmetic> {
+    pub(crate) L_vec: Vec<Scalar<C>>,
+    pub(crate) R_vec: Vec<Scalar<C>>,
+    pub(crate) a: Scalar<C>,
+    pub(crate) b: Scalar<C>,
 }
 
-
-fn NISA_prove(param : Param, g : GroupAffine, P : GroupAffine, c : Field, a : &[Field]) -> Proof { 
-}
-
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RingSignature<C: PrimeCurve + ScalarArithmetic + AffineArithmetic> {
+    pub(crate) z: Scalar<C>,
+    pub(crate) R: AffinePoint<C>,
+    pub(crate) pi: SumArg<C>,
 }

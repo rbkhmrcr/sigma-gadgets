@@ -1,4 +1,11 @@
-pub use elliptic_curve;
+use elliptic_curves;
+fn main() {
+    println!("Hello, world!");
+}
+
+
+fn NISA_prove(param : Param, g : GroupAffine, P : GroupAffine, c : Field, a : &[Field]) -> Proof { 
+}
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
